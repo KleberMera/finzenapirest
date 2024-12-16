@@ -1,24 +1,9 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { compare } from 'bcrypt';
 import { encrypt } from 'src/libs/bcrypt';
+import { UserDTO } from 'src/models/user.interface';
 import { PrismaService } from 'src/prisma/prisma.service';
-
-export interface UserDTO {
-  rol_id: number;
-  name: string;
-  last_name: string;
-  username: string;
-  user: string;
-  email: string;
-  password: string;
-  phone: string;
-  status: boolean;
-}
 
 @Injectable()
 export class AuthService {
@@ -46,19 +31,18 @@ export class AuthService {
       }
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { password,  createdAt, updatedAt, ...userWithoutPassword} = userData;
+      const { password, createdAt, updatedAt, ...userWithoutPassword } =
+        userData;
       const payload = {
-        ...userWithoutPassword,
-        ...{ createdAt, updatedAt },
+        ...{ userWithoutPassword, createdAt, updatedAt },
       };
 
       const access_token = await this.jwtService.signAsync(payload);
 
       return {
         message: 'Usuario autenticado con éxito',
-        data : userWithoutPassword,
+        data: userWithoutPassword,
         access_token: access_token,
-        
       };
     } catch (error) {
       if (error instanceof BadRequestException) {
