@@ -3,6 +3,9 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import { compare } from 'bcrypt';
+import { encrypt } from 'src/libs/bcrypt';
 import { PrismaService } from 'src/prisma/prisma.service';
 
 export interface UserDTO {
@@ -19,7 +22,51 @@ export interface UserDTO {
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(
+    private readonly prismaService: PrismaService,
+    private readonly jwtService: JwtService,
+  ) {}
+
+  async login(user: UserDTO) {
+    try {
+      const userData = await this.prismaService.user.findUnique({
+        where: {
+          user: user.user,
+        },
+      });
+
+      if (!userData) {
+        throw new BadRequestException('Usuario o contraseña invalidos');
+      }
+
+      const isPasswordMatch = await compare(user.password, userData.password);
+
+      if (!isPasswordMatch) {
+        throw new BadRequestException('Usuario o contraseña invalidos');
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { password,  createdAt, updatedAt, ...userWithoutPassword} = userData;
+      const payload = {
+        ...userWithoutPassword,
+        ...{ createdAt, updatedAt },
+      };
+
+      const access_token = await this.jwtService.signAsync(payload);
+
+      return {
+        message: 'Usuario autenticado con éxito',
+        data : userWithoutPassword,
+        access_token: access_token,
+        
+      };
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new Error(`Error al autenticar el usuario: ${error.message}`);
+    }
+  }
 
   // Obtener todos los usuarios
   async getUser() {
@@ -58,15 +105,21 @@ export class AuthService {
 
       if (existingUser) throw new BadRequestException('El usuario ya existe');
 
+      const hashedPassword = await encrypt(user.password);
+
       const newUser = await this.prismaService.user.create({
         data: {
           ...user,
+          password: hashedPassword,
         },
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { password, ...userWithoutPassword } = newUser;
+
       return {
         message: 'Usuario creado con éxito',
-        data: newUser,
+        data: userWithoutPassword,
       };
     } catch (error) {
       if (error instanceof BadRequestException) {

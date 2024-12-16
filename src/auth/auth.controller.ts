@@ -17,9 +17,9 @@ export interface UserDTO {
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @Get('login')
-  login() {
-    return 'login';
+  @Post('login')
+  login(@Body() user: UserDTO) {
+    return this.authService.login(user);
   }
 
   @Post('sign-up')
