@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { compare } from 'bcrypt';
 import { encrypt } from 'src/libs/bcrypt';
@@ -99,7 +103,8 @@ export class AuthService {
       });
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { password, ...userWithoutPassword } = newUser;
+      const { password, createdAt, updatedAt, ...userWithoutPassword } =
+        newUser;
 
       return {
         message: 'Usuario creado con éxito',

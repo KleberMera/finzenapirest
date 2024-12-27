@@ -28,10 +28,10 @@ model User {
   rol_id     Int
   role       Role     @relation(fields: [rol_id], references: [id])
   name       String
-  last_name  String
-  username   String   @unique
-  user       String   @unique
-  email      String   @unique
+  last_name  String?
+  username   String?   @unique
+  user       String?   @unique
+  email      String?   @unique
   password   String
   phone      String
   status     Boolean  @default(true)
@@ -44,8 +44,9 @@ model Category {
   id          Int      @id @default(autoincrement())
   user_id     Int
   user        User     @relation(fields: [user_id], references: [id])
-  name        String
-  description String
+  name        String?
+  icon        String?
+  type        String   @default("Ingreso")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
