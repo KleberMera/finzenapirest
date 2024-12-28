@@ -75,4 +75,27 @@ export class CategoryService {
       throw new Error(`Error al cargar las categorías: ${error.message}`);
     }
   }
+
+  async deleteCategory(id: number) {
+    try {
+      const category = await this.prismaService.category.findUnique({
+        where: { id },
+      });
+      if (!category) {
+        throw new NotFoundException(`Categoria con ID ${id} no encontrado`);
+      }
+      await this.prismaService.category.delete({
+        where: { id },
+      });
+      return {
+        message: 'Categoría eliminada con éxito',
+        //data: category,
+      };
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error(`Error al eliminar la categoría: ${error.message}`);
+    }
+  }
 }
