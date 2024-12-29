@@ -11,7 +11,7 @@ export class CategoryController {
     return await this.categoryService.getCategoryById(Number(id));
   }
 
-  @Get('category')
+  @Get()
   async getCategory() {
     return await this.categoryService.getCategory();
   }
@@ -26,7 +26,6 @@ export class CategoryController {
     return await this.categoryService.getCategoriesByUserId(Number(userId));
   }
 
-  //Eliminar una categoria
   @Delete(':id')
   async deleteCategory(@Param('id') id: string) {
     return await this.categoryService.deleteCategory(Number(id));

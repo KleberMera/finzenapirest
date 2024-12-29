@@ -5,7 +5,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 @Injectable()
 export class CategoryService {
   constructor(private readonly prismaService: PrismaService) {}
-
+  
   async getCategoryById(id: number) {
     const category = await this.prismaService.category.findUnique({
       where: { id },

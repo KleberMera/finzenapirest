@@ -10,7 +10,7 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -37,7 +37,7 @@ model User {
   status     Boolean  @default(true)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
-  categories Category[] 
+  categories Category[]
 }
 
 model Category {
@@ -47,6 +47,19 @@ model Category {
   name        String?
   icon        String?
   type        String   @default("Ingreso")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  transactions Transaction[]
+}
+
+model Transaction {
+  id          Int      @id @default(autoincrement())
+  category_id Int
+  category    Category @relation(fields: [category_id], references: [id])
+  name        String?
+  description String?
+  amount      Int
+  date        DateTime @default(now())
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
