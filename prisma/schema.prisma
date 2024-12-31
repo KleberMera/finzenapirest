@@ -59,7 +59,7 @@ model Transaction {
   name        String?
   description String?
   amount      Int
-  date        DateTime @default(now())
+  date        String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }

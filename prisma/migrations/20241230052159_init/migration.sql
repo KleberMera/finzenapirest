@@ -47,7 +47,7 @@ CREATE TABLE "Transaction" (
     "name" TEXT,
     "description" TEXT,
     "amount" INTEGER NOT NULL,
-    "date" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "date" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 

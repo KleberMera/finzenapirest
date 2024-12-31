@@ -11,9 +11,10 @@ export class TransactionService {
       where: {
         category: {
           user_id: userId,
-        },
-      },
-      
+        }
+      },include: {
+          category: true
+      }
     });
     return {
       message: 'Transacciones cargadas con éxito',
