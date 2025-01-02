@@ -38,6 +38,7 @@ model User {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
   categories Category[]
+  debts      Debt[]
 }
 
 model Category {
@@ -62,4 +63,37 @@ model Transaction {
   date        String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model Debt {
+  id              Int            @id @default(autoincrement())
+  user_id         Int
+  user            User           @relation(fields: [user_id], references: [id])
+  name            String?
+  description     String?
+  amount          Int
+  interest_rate   Int?
+  duration_months Int?
+  method          String?
+  start_date      String?
+  end_date        String?
+  status          String?        @default("Pendiente")
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  amortizations   Amortization[]
+}
+
+model Amortization {
+  id            Int      @id @default(autoincrement())
+  debt_id       Int
+  debt          Debt     @relation(fields: [debt_id], references: [id])
+  number_months Int?
+  date          String?
+  quota         Int?
+  interest      Int?
+  amortized     Int?
+  outstanding   Int?
+  status        String?  @default("Pendiente")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
