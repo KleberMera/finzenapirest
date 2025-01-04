@@ -1,5 +1,4 @@
 export interface AmortizationDTO {
-  debt_id: number;
   number_months: number;
   date: string;
   quota: number;

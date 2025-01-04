@@ -16,8 +16,19 @@ export class DebtService {
         amortizations: true,
       },
     });
+
+    // Borrar createdAt y updatedAt de la respuesta y de las amortizaciones
+    debts.forEach((debt) => {
+      delete debt.createdAt;
+      delete debt.updatedAt;
+      debt.amortizations.forEach((amortization) => {
+        delete amortization.createdAt;
+        delete amortization.updatedAt;
+      });
+    });
+
     return {
-      message: 'Debt cargados con éxito',
+      message: 'Deudas cargadas con éxito',
       data: debts,
     };
   }
@@ -28,8 +39,8 @@ export class DebtService {
         data: {
           ...debt,
           amortizations: {
-            create: {
-              ...debt.amortizations,
+            createMany: {
+              data: debt.amortizations,
             },
           },
         },
