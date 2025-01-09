@@ -59,7 +59,7 @@ model Transaction {
   category    Category @relation(fields: [category_id], references: [id])
   name        String?
   description String?
-  amount      Int
+  amount      Decimal
   date        String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -71,8 +71,8 @@ model Debt {
   user            User           @relation(fields: [user_id], references: [id])
   name            String?
   description     String?
-  amount          Int
-  interest_rate   Int?
+  amount          Decimal?
+  interest_rate   Decimal?
   duration_months Int?
   method          String?
   start_date      String?
@@ -89,10 +89,10 @@ model Amortization {
   debt          Debt     @relation(fields: [debt_id], references: [id])
   number_months Int?
   date          String?
-  quota         Int?
-  interest      Int?
-  amortized     Int?
-  outstanding   Int?
+  quota         Decimal?
+  interest      Decimal?
+  amortized     Decimal?
+  outstanding   Decimal?
   status        String?  @default("Pendiente")
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
