@@ -21,7 +21,16 @@ export class DniService {
         }),
       );
 
-      return response.data;
+      // Si hay nombreComercial, separamos nombres y apellidos
+      const nameInfo = response.data.contribuyente.nombreComercial
+        ? this.splitFullName(response.data.contribuyente.nombreComercial)
+        : { nombres: '', apellidos: '' };
+
+      return {
+        ...response.data,
+        nombres: nameInfo.nombres,
+        apellidos: nameInfo.apellidos,
+      };
     } catch (error) {
       if (error instanceof HttpException) {
         throw error;
@@ -31,5 +40,16 @@ export class DniService {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+  }
+
+  private splitFullName(nombreComercial: string): {
+    nombres: string;
+    apellidos: string;
+  } {
+    const parts = nombreComercial.split(' ');
+    const nombres = parts.slice(-2).join(' ');
+    const apellidos = parts.slice(0, -2).join(' ');
+
+    return { nombres, apellidos };
   }
 }
