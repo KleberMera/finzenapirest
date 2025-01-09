@@ -1,9 +1,11 @@
+import { Decimal } from "@prisma/client/runtime/library";
+
 export interface AmortizationDTO {
   number_months: number;
   date: string;
-  quota: number;
-  interest: number;
-  amortized: number;
-  outstanding: number;
+  quota: Decimal;
+  interest: Decimal;
+  amortized: Decimal;
+  outstanding: Decimal;
   status: string;
 }

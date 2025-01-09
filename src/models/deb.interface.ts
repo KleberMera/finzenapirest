@@ -1,3 +1,4 @@
+import { Decimal } from '@prisma/client/runtime/library';
 import { AmortizationDTO } from './amortization.interface';
 
 export interface DebtDTO {
@@ -5,8 +6,8 @@ export interface DebtDTO {
   user_id: number;
   name: string;
   description: string;
-  amount: number;
-  interest_rate: number;
+  amount: Decimal;
+  interest_rate: Decimal;
   duration_months: number;
   method: string;
   start_date: string;
