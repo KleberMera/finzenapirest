@@ -1,93 +1,109 @@
-import {
-  BadRequestException,
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, UnauthorizedException} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as firebaseAdmin from 'firebase-admin';
 import { PrismaService } from 'src/prisma/prisma.service';
-// Interfaz para el login con Google
-interface GoogleUserDTO {
-  token: string;
+
+export interface FirebaseDecodedToken {
+  name: string;
+  picture: string;
+  iss: string;
+  aud: string;
+  auth_time: number;
+  user_id: string;
+  sub: string;
+  iat: number;
+  exp: number;
+  email: string;
+  email_verified: boolean;
+  firebase: {
+    identities: {
+      'google.com': string[];
+      email: string[];
+    };
+    sign_in_provider: string;
+  };
+  uid: string;
 }
+
+
 @Injectable()
 export class FirebaseService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly jwtService: JwtService,
   ) {}
-  // Nuevos métodos para Google Auth
-  async loginWithGoogle(googleData: GoogleUserDTO) {
+  async loginWithGoogle(idToken: string) {
     try {
-      const decodedToken = await firebaseAdmin
-        .auth()
-        .verifyIdToken(googleData.token);
-
+      const decodedToken = await firebaseAdmin.auth().verifyIdToken(idToken) as FirebaseDecodedToken;
+      
       const existingUser = await this.prismaService.user.findFirst({
         where: {
           OR: [
             { email: decodedToken.email },
-            { firebaseUid: decodedToken.uid },
-          ],
+            { firebaseUid: decodedToken.uid }
+          ]
         },
       });
 
-      if (existingUser) {
-        // Usuario existe - actualizar firebaseUid si es necesario
-        const updatedUser = await this.prismaService.user.update({
-          where: { id: existingUser.id },
-          data: {
-            firebaseUid: decodedToken.uid,
-          },
-        });
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { password, createdAt, updatedAt, ...userWithoutPassword } =
-          updatedUser;
-        const payload = {
-          ...{ userWithoutPassword, createdAt, updatedAt },
-        };
-
-        const access_token = await this.jwtService.signAsync(payload);
-
-        return {
-          message: 'Usuario autenticado con éxito via Google',
-          data: userWithoutPassword,
-          access_token: access_token,
-        };
+      if (!existingUser) {
+        throw new BadRequestException('Usuario no encontrado. Por favor, regístrese primero.');
       }
 
-      // Usuario no existe - crear nuevo
-      return this.signUpWithGoogle(decodedToken);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { password, createdAt, updatedAt, ...userWithoutPassword } = existingUser;
+      const payload = { userWithoutPassword, createdAt, updatedAt };
+
+      const access_token = await this.jwtService.signAsync(payload);
+
+      return {
+        message: 'Usuario autenticado con éxito via Google',
+        data: userWithoutPassword,
+        access_token: access_token,
+      };
     } catch (error) {
       if (error instanceof BadRequestException) {
         throw error;
       }
-      throw new UnauthorizedException('Token de Google inválido');
+      console.error('Error in loginWithGoogle:', error);
+      throw new UnauthorizedException('Error al autenticar con Google');
     }
   }
 
-  private async signUpWithGoogle(
-    decodedToken: firebaseAdmin.auth.DecodedIdToken,
-  ) {
+  async signUpWithGoogle(idToken: string) {
     try {
+      const decodedToken = await firebaseAdmin.auth().verifyIdToken(idToken) as FirebaseDecodedToken;
+
+      // Verificar si el usuario ya existe
+      const existingUser = await this.prismaService.user.findFirst({
+        where: {
+          OR: [
+            { email: decodedToken.email },
+            { firebaseUid: decodedToken.uid }
+          ]
+        },
+      });
+
+      if (existingUser) {
+        throw new BadRequestException('El usuario ya existe. Por favor, inicie sesión.');
+      }
+
+      const username = decodedToken.name || decodedToken.email.split('@')[0];
+      
       const newUser = await this.prismaService.user.create({
         data: {
           email: decodedToken.email,
-          user: decodedToken.email.split('@')[0], // Crear un user basado en el email
-          username: decodedToken.name || decodedToken.email.split('@')[0],
+          user: decodedToken.email.split('@')[0],
+          username: username,
+          name: decodedToken.name || null,
           firebaseUid: decodedToken.uid,
-          rol_id: 2,
-
-          // Campos opcionales que podrías querer agregar
-          //password: null, // No necesario para usuarios de Google
+          rol_id: 2, // Rol por defecto
+          status: true
         },
       });
+
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { password, createdAt, updatedAt, ...userWithoutPassword } =
-        newUser;
-      const payload = {
-        ...{ userWithoutPassword, createdAt, updatedAt },
-      };
+      const { password, createdAt, updatedAt, ...userWithoutPassword } = newUser;
+      const payload = { userWithoutPassword, createdAt, updatedAt };
 
       const access_token = await this.jwtService.signAsync(payload);
 
@@ -100,9 +116,9 @@ export class FirebaseService {
       if (error instanceof BadRequestException) {
         throw error;
       }
-      throw new Error(
-        `Error al registrar el usuario con Google: ${error.message}`,
-      );
+      console.error('Error in signUpWithGoogle:', error);
+      throw new Error(`Error al registrar el usuario con Google: ${error.message}`);
     }
   }
+  
 }

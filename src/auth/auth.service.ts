@@ -56,28 +56,7 @@ export class AuthService {
     }
   }
 
-  // Obtener todos los usuarios
-  async getUser() {
-    const users = await this.prismaService.user.findMany();
-    return {
-      message: 'Usuarios obtenidos con éxito',
-      data: users,
-    };
-  }
-
-  // Obtener un usuario por ID
-  async getUserById(id: number) {
-    const user = await this.prismaService.user.findUnique({
-      where: { id },
-    });
-    if (!user) {
-      throw new NotFoundException(`Usuario con ID ${id} no encontrado`);
-    }
-    return {
-      message: 'Usuario obtenido con éxito',
-      data: user,
-    };
-  }
+  
 
   async signUp(user: UserDTO) {
     try {
@@ -116,5 +95,31 @@ export class AuthService {
       }
       throw new Error(`Error al registrar el usuario: ${error.message}`);
     }
+  }
+
+
+
+
+  // Obtener todos los usuarios
+  async getUser() {
+    const users = await this.prismaService.user.findMany();
+    return {
+      message: 'Usuarios obtenidos con éxito',
+      data: users,
+    };
+  }
+
+  // Obtener un usuario por ID
+  async getUserById(id: number) {
+    const user = await this.prismaService.user.findUnique({
+      where: { id },
+    });
+    if (!user) {
+      throw new NotFoundException(`Usuario con ID ${id} no encontrado`);
+    }
+    return {
+      message: 'Usuario obtenido con éxito',
+      data: user,
+    };
   }
 }
