@@ -7,9 +7,13 @@ import { CategoryModule } from './category/category.module';
 import { TransactionModule } from './transaction/transaction.module';
 import { DebtModule } from './debt/debt.module';
 import { DniModule } from './dni/dni.module';
+import { FirebaseModule } from './firebase/firebase.module';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
-  imports: [AuthModule, PrismaModule, CategoryModule, TransactionModule, DebtModule, DniModule],
+  imports: [
+    ConfigModule.forRoot(),
+    AuthModule, PrismaModule, CategoryModule, TransactionModule, DebtModule, DniModule, FirebaseModule],
   controllers: [AppController],
   providers: [AppService],
 })
