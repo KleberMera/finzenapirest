@@ -32,6 +32,7 @@ export class FirebaseService {
     private readonly prismaService: PrismaService,
     private readonly jwtService: JwtService,
   ) {}
+
   async loginWithGoogle(idToken: string) {
     try {
       const decodedToken = await firebaseAdmin.auth().verifyIdToken(idToken) as FirebaseDecodedToken;
@@ -46,6 +47,7 @@ export class FirebaseService {
       });
 
       if (!existingUser) {
+        await firebaseAdmin.auth().deleteUser(decodedToken.uid);
         throw new BadRequestException('Usuario no encontrado. Por favor, regístrese primero.');
       }
 
