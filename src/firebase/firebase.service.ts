@@ -47,6 +47,7 @@ export class FirebaseService {
       });
 
       if (!existingUser) {
+        console.log(decodedToken.uid)
         await firebaseAdmin.auth().deleteUser(decodedToken.uid);
         throw new BadRequestException('Usuario no encontrado. Por favor, regístrese primero.');
       }
@@ -66,6 +67,7 @@ export class FirebaseService {
       if (error instanceof BadRequestException) {
         throw error;
       }
+      
       console.error('Error in loginWithGoogle:', error);
       throw new UnauthorizedException('Error al autenticar con Google');
     }
