@@ -1,6 +1,14 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseIntPipe,
+  Post,
+  Put,
+} from '@nestjs/common';
 import { DebtService } from './debt.service';
-import { DebtDTO } from 'src/models/deb.interface';
+import { DebtDTO, UpdateDebtAmortizationsDto, UpdateStatusDto } from 'src/models/deb.interface';
 
 @Controller('debt')
 export class DebtController {
@@ -14,5 +22,18 @@ export class DebtController {
   @Post()
   async createDebt(@Body() debt: DebtDTO) {
     return await this.debtService.createDebt(debt);
+  }
+
+  @Put('update-status')
+  async updateStatus(
+    @Param('debtId', ParseIntPipe) debtId: number,
+    @Body() updateDto: UpdateStatusDto,
+  ) {
+    return await this.debtService.updateStatus(debtId, updateDto);
+  }
+
+  @Put('update-amortizations')
+  async updateDebtAmortizations(@Body() updateDto: UpdateDebtAmortizationsDto) {
+    return await this.debtService.updateDebtAmortizations(updateDto);
   }
 }
