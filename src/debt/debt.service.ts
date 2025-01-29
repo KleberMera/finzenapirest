@@ -7,6 +7,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 export class DebtService {
   constructor(private prismaService: PrismaService) {}
 
+  // Obtener todas las deudas de un usuario
   async getDebtByUserId(userId: number) {
     const debts = await this.prismaService.debt.findMany({
       where: {
@@ -30,6 +31,41 @@ export class DebtService {
     return {
       message: 'Deudas cargadas con éxito',
       data: debts,
+    };
+  }
+
+  // Obtener todas las deudas de un usuario
+  async getDebtByUserIdDebt(userId: number) {
+    const debts = await this.prismaService.debt.findMany({
+      where: {
+        user_id: userId,
+      },
+     
+    });
+
+    // Borrar createdAt y updatedAt de la respuesta y de las amortizaciones
+    debts.forEach((debt) => {
+      delete debt.createdAt;
+      delete debt.updatedAt;
+      
+    });
+
+    return {
+      message: 'Deudas cargadas con éxito',
+      data: debts,
+    };
+  }
+
+  //Obtener por id de deuda las amortizaciones
+  async getAmortizationsByDebtId(debtId: number) {
+    const amortizations = await this.prismaService.amortization.findMany({
+      where: {
+        debt_id: debtId,
+      },
+    });
+    return {
+      message: 'Amortizaciones cargadas con éxito',
+      data: amortizations,
     };
   }
 

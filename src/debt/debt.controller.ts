@@ -19,6 +19,16 @@ export class DebtController {
     return await this.debtService.getDebtByUserId(Number(userId));
   }
 
+  @Get('user/:userId/debt')
+  async getDebtByUserIdDebt(@Param('userId') userId: string) {
+    return await this.debtService.getDebtByUserIdDebt(Number(userId));
+  }
+
+  @Get('amortizations/:debtId')
+  async getAmortizationsByDebtId(@Param('debtId', ParseIntPipe) debtId: number) {
+    return await this.debtService.getAmortizationsByDebtId(debtId);
+  }
+
   @Post()
   async createDebt(@Body() debt: DebtDTO) {
     return await this.debtService.createDebt(debt);
