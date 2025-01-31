@@ -34,7 +34,7 @@ export class DebtController {
     return await this.debtService.createDebt(debt);
   }
 
-  @Put('update-status')
+  @Put('update-status/:debtId') 
   async updateStatus(
     @Param('debtId', ParseIntPipe) debtId: number,
     @Body() updateDto: UpdateStatusDto,
