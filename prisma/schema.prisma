@@ -4,7 +4,6 @@
 // Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -20,37 +19,38 @@ model Role {
   description String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  users       User[]  
+  users       User[]
 }
 
 model User {
-  id         Int      @id @default(autoincrement())
-  rol_id     Int
-  role       Role     @relation(fields: [rol_id], references: [id])
-  name       String?
-  last_name  String?
-  username   String?   @unique
-  user       String?   @unique
-  email      String?   @unique
-  password   String?
-  phone      String?
-  firebaseUid String?  @unique 
-  status     Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  categories Category[]
-  debts      Debt[]
+  id                Int        @id @default(autoincrement())
+  rol_id            Int
+  role              Role       @relation(fields: [rol_id], references: [id])
+  name              String?
+  last_name         String?
+  username          String?    @unique
+  user              String?    @unique
+  email             String?    @unique
+  password          String?
+  phone             String?
+  firebaseUid       String?    @unique
+  notificationToken String?    @unique
+  status            Boolean    @default(true)
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+  categories        Category[]
+  debts             Debt[]
 }
 
 model Category {
-  id          Int      @id @default(autoincrement())
-  user_id     Int
-  user        User     @relation(fields: [user_id], references: [id])
-  name        String?
-  icon        String?
-  type        String   @default("Ingreso")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           Int           @id @default(autoincrement())
+  user_id      Int
+  user         User          @relation(fields: [user_id], references: [id])
+  name         String?
+  icon         String?
+  type         String        @default("Ingreso")
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
   transactions Transaction[]
 }
 

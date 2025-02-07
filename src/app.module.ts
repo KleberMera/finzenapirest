@@ -9,11 +9,13 @@ import { DebtModule } from './debt/debt.module';
 import { DniModule } from './dni/dni.module';
 import { FirebaseModule } from './firebase/firebase.module';
 import { ConfigModule } from '@nestjs/config';
+import { NotificationsModule } from './notifications/notifications.module';
+
 
 @Module({
   imports: [
     ConfigModule.forRoot(),
-    AuthModule, PrismaModule, CategoryModule, TransactionModule, DebtModule, DniModule, FirebaseModule],
+    AuthModule, PrismaModule, CategoryModule, TransactionModule, DebtModule, DniModule, FirebaseModule, NotificationsModule],
   controllers: [AppController],
   providers: [AppService],
 })
