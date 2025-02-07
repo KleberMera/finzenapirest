@@ -1,74 +1,101 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import * as firebaseAdmin from 'firebase-admin';
+import * as admin from 'firebase-admin';
+import { Cron } from '@nestjs/schedule';
+
 @Injectable()
 export class NotificationsService {
     constructor(private prisma: PrismaService) {}
-  
-    async saveUserToken(firebaseUid: string, token: string) {
-      await this.prisma.user.update({
-        where: { firebaseUid },
-        data: { notificationToken: token }
+
+    async updatePreferences(userId: number, preferences: {
+      pushEnabled: boolean;
+      daysBeforeNotify: number;
+    }) {
+      return this.prisma.notificationPreference.update({
+        where: { user_id: userId },
+        data: preferences
       });
     }
   
-// notifications.service.ts (NestJS)
-async sendDebtReminder(debtId: number, daysBefore: number) {
-    const dateToString = (date: Date) => date.toISOString().split('T')[0];
-    
-    const debt = await this.prisma.debt.findUnique({
-      where: { id: debtId },
-      include: {
-        user: true,
-        amortizations: {
-          where: {
-            date: {
-              gte: dateToString(new Date()),
-              lte: dateToString(new Date(new Date().setDate(new Date().getDate() + daysBefore)))
+    async saveToken(userId: number, token: string) {
+      return this.prisma.notificationPreference.upsert({
+        where: { user_id: userId },
+        update: {
+          deviceTokens: {
+            push: token
+          }
+        },
+        create: {
+          user_id: userId,
+          pushEnabled: true,
+          deviceTokens: [token]
+        }
+      });
+    }
+  
+    @Cron('0 0 * * *') // Cada día a medianoche
+    async checkUpcomingPayments() {
+      const today = new Date();
+      const users = await this.prisma.user.findMany({
+        where: {
+          notificationPreferences: {
+            pushEnabled: true
+          }
+        },
+        include: {
+          debts: {
+            include: {
+              amortizations: true
+            }
+          },
+          notificationPreferences: true
+        }
+      });
+  
+      for (const user of users) {
+        const daysBeforeNotify = user.notificationPreferences.daysBeforeNotify;
+        
+        for (const debt of user.debts) {
+          for (const amortization of debt.amortizations) {
+            const paymentDate = new Date(amortization.date);
+            const daysUntilPayment = Math.floor(
+              (paymentDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+            );
+  
+            if (daysUntilPayment === daysBeforeNotify && amortization.status === 'Pendiente') {
+              for (const token of user.notificationPreferences.deviceTokens) {
+                await this.sendNotification(token, {
+                  title: 'Recordatorio de Pago',
+                  body: `Tienes un pago pendiente de ${amortization.quota} para la deuda "${debt.name}" en ${daysBeforeNotify} días.`,
+                  data: {
+                    debtId: debt.id.toString(),
+                    amortizationId: amortization.id.toString()
+                  }
+                });
+              }
             }
           }
         }
       }
-    });
-  
-    if (!debt || !debt.user?.notificationToken || debt.amortizations.length === 0) return;
-  
-    const amortization = debt.amortizations[0];
-    const message = {
-      token: debt.user.notificationToken,
-      notification: {
-        title: 'Recordatorio de pago',
-        body: `Tienes un pago de ${amortization.quota} programado para ${amortization.date}`
-      }
-    };
-  
-    await firebaseAdmin.messaging().send(message);
-  }
-
-
-    // notifications.service.ts (NestJS)
-async checkDueAmortizations() {
-    const dateToString = (date: Date) => date.toISOString().split('T')[0];
-    
-    const dueAmortizations = await this.prisma.amortization.findMany({
-      where: {
-        date: {
-          gte: dateToString(new Date(new Date().setDate(new Date().getDate() + 1))),
-          lte: dateToString(new Date(new Date().setDate(new Date().getDate() + 2)))
-        },
-        status: 'Pendiente'
-      },
-      include: {
-        debt: {
-          include: {
-            user: true // Incluir relación user
-          }
-        }
-      }
-    });
-  
-    for (const amortization of dueAmortizations) {
-      await this.sendDebtReminder(amortization.debt.id, 1);
     }
-  }
+  
+     async sendNotification(token: string, notification: {
+      title: string;
+      body: string;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      data?: any;
+    }) {
+      try {
+        await admin.messaging().send({
+          token,
+          notification: {
+            title: notification.title,
+            body: notification.body
+          },
+          data: notification.data
+        });
+      } catch (error) {
+        console.error('Error sending notification:', error);
+      }
+    }
   }

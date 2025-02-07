@@ -23,23 +23,34 @@ model Role {
 }
 
 model User {
-  id                Int        @id @default(autoincrement())
-  rol_id            Int
-  role              Role       @relation(fields: [rol_id], references: [id])
-  name              String?
-  last_name         String?
-  username          String?    @unique
-  user              String?    @unique
-  email             String?    @unique
-  password          String?
-  phone             String?
-  firebaseUid       String?    @unique
-  notificationToken String?    @unique
-  status            Boolean    @default(true)
-  createdAt         DateTime   @default(now())
-  updatedAt         DateTime   @updatedAt
-  categories        Category[]
-  debts             Debt[]
+  id                      Int                     @id @default(autoincrement())
+  rol_id                  Int
+  role                    Role                    @relation(fields: [rol_id], references: [id])
+  name                    String?
+  last_name               String?
+  username                String?                 @unique
+  user                    String?                 @unique
+  email                   String?                 @unique
+  password                String?
+  phone                   String?
+  firebaseUid             String?                 @unique
+  notificationPreferences NotificationPreference?
+  status                  Boolean                 @default(true)
+  createdAt               DateTime                @default(now())
+  updatedAt               DateTime                @updatedAt
+  categories              Category[]
+  debts                   Debt[]
+}
+
+model NotificationPreference {
+  id               Int      @id @default(autoincrement())
+  user_id          Int      @unique
+  user             User     @relation(fields: [user_id], references: [id])
+  pushEnabled      Boolean  @default(false)
+  daysBeforeNotify Int      @default(2)
+  deviceTokens     String[] // Array of push notification tokens
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
 
 model Category {

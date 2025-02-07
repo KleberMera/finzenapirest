@@ -1,16 +1,37 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Post, Request } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
-import { User } from 'src/models/user.decorator';
-import { UserDTO } from 'src/models/user.interface';
+
 
 @Controller('notifications')
 export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
 
-
-  @Post('subscribe')
-
-  async subscribe(@Body('token') token: string, @User() user: UserDTO) {
-    return this.notificationsService.saveUserToken(user.firebaseUid, token);
+  @Post('token')
+  async saveToken(
+    @Body() { token }: { token: string }, 
+    @Request() req
+  ) {
+    return this.notificationsService.saveToken(req.user.id, token);
   }
+
+  @Post('preferences')
+  async updatePreferences(
+    @Body() preferences: {
+      pushEnabled: boolean;
+      daysBeforeNotify: number;
+    },
+    @Request() req
+  ) {
+    return this.notificationsService.updatePreferences(req.user.id, preferences);
+  }
+
+  @Post('test')
+  async testNotification(@Request() req) {
+    return this.notificationsService.sendNotification(req.user.id, {
+      title: 'Prueba de Notificación',
+      body: 'Si ves esto, las notificaciones están funcionando correctamente!'
+    });
+  }
+
+
 }
