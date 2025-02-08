@@ -47,7 +47,7 @@ export class NotificationsService {
     }
   }
 
-  @Cron('0 0 * * *') // Cada día a medianoche
+  @Cron('45 * * * * *')
   async checkUpcomingPayments() {
     const today = new Date();
     const users = await this.prisma.user.findMany({
@@ -101,7 +101,6 @@ export class NotificationsService {
             title: notification.title,
             body: notification.body,
             icon: 'https://fin-zen.vercel.app/favicon.png',
-            Cron: 'https://fin-zen.vercel.app'
           }
         })
       );

@@ -10,11 +10,13 @@ import { DniModule } from './dni/dni.module';
 import { FirebaseModule } from './firebase/firebase.module';
 import { ConfigModule } from '@nestjs/config';
 import { NotificationsModule } from './notifications/notifications.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 
 @Module({
   imports: [
     ConfigModule.forRoot(),
+    ScheduleModule.forRoot(),
     AuthModule, PrismaModule, CategoryModule, TransactionModule, DebtModule, DniModule, FirebaseModule, NotificationsModule],
   controllers: [AppController],
   providers: [AppService],
