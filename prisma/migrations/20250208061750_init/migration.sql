@@ -34,7 +34,7 @@ CREATE TABLE "NotificationPreference" (
     "user_id" INTEGER NOT NULL,
     "pushEnabled" BOOLEAN NOT NULL DEFAULT false,
     "daysBeforeNotify" INTEGER NOT NULL DEFAULT 2,
-    "deviceTokens" TEXT[],
+    "subscription" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 

@@ -43,12 +43,12 @@ model User {
 }
 
 model NotificationPreference {
-  id               Int      @id @default(autoincrement())
+  id                Int      @id @default(autoincrement())
   user_id          Int      @unique
   user             User     @relation(fields: [user_id], references: [id])
   pushEnabled      Boolean  @default(false)
   daysBeforeNotify Int      @default(2)
-  deviceTokens     String[] // Array of push notification tokens
+  subscription     String?  // Guardamos la suscripción como string (JSON)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 }

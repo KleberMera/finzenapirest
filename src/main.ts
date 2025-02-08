@@ -8,7 +8,7 @@ async function bootstrap() {
 
   // Enable CORS
   app.enableCors({
-    origin: ['http://localhost:4200', 'https://fin-zen.vercel.app'],
+    origin: ['http://localhost:4200', 'https://fin-zen.vercel.app', 'http://127.0.0.1:8080'],
   });
 
   // Initialize Firebase Admin

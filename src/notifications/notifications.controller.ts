@@ -1,36 +1,38 @@
 import { Body, Controller, Post, Request } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
+import { PrismaService } from 'src/prisma/prisma.service';
 
 
 @Controller('notifications')
 export class NotificationsController {
-  constructor(private readonly notificationsService: NotificationsService) {}
+  constructor(private readonly notificationsService: NotificationsService, private prisma: PrismaService) {}
 
-  @Post('token')
-  async saveToken(
-    @Body() { token }: { token: string }, 
+  @Post('subscribe')
+  async subscribe(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    @Body() subscription: any,
     @Request() req
   ) {
-    return this.notificationsService.saveToken(req.user.id, token);
-  }
-
-  @Post('preferences')
-  async updatePreferences(
-    @Body() preferences: {
-      pushEnabled: boolean;
-      daysBeforeNotify: number;
-    },
-    @Request() req
-  ) {
-    return this.notificationsService.updatePreferences(req.user.id, preferences);
+    return this.notificationsService.saveSubscription(req.user.id, subscription);
   }
 
   @Post('test')
-  async testNotification(@Request() req) {
-    return this.notificationsService.sendNotification(req.user.id, {
-      title: 'Prueba de Notificación',
-      body: 'Si ves esto, las notificaciones están funcionando correctamente!'
+  async test(@Request() req) {
+    // Para pruebas
+    const user = await this.prisma.user.findUnique({
+      where: { id: req.user.id },
+      include: { notificationPreferences: true }
     });
+
+    if (user?.notificationPreferences?.subscription) {
+      return this.notificationsService.sendNotification(
+        JSON.parse(user.notificationPreferences.subscription),
+        {
+          title: 'Prueba de Notificación',
+          body: '¡Si ves esto, las notificaciones están funcionando!'
+        }
+      );
+    }
   }
 
 
