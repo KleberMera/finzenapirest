@@ -7,7 +7,7 @@ import { Cron } from '@nestjs/schedule';
 export class NotificationsService {
   constructor(private prisma: PrismaService) {
     webpush.setVapidDetails(
-      'mailto:tu@email.com',
+      'mailto:klebermera2024@gmail.com', // tu correo
       'BB9RG9no5eZuqpw0mqNNTRdo1gzSQJAhVKsI2X8SDuUHnHAKcO8co6UWPkZwykP7OINeSSV3IiN_hjVj_kwhaLM',
       '4CIL0JhqmwowpCkk0NNlyi7-dx9bACuJEAfDlJcZo5c'
     );
@@ -28,6 +28,23 @@ export class NotificationsService {
         daysBeforeNotify: 2
       }
     });
+  }
+
+  async sendTestNotification(userId: number) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { notificationPreferences: true }
+    });
+
+    if (user?.notificationPreferences?.subscription) {
+      return this.sendNotification(
+        JSON.parse(user.notificationPreferences.subscription),
+        {
+          title: 'Prueba de Notificación',
+          body: '¡Si ves esto, las notificaciones están funcionando!'
+        }
+      );
+    }
   }
 
   @Cron('0 0 * * *') // Cada día a medianoche
@@ -75,7 +92,7 @@ export class NotificationsService {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-   async sendNotification(subscription: any, notification: { title: string; body: string }) {
+  private async sendNotification(subscription: any, notification: { title: string; body: string }) {
     try {
       await webpush.sendNotification(
         subscription,
