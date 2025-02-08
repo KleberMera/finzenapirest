@@ -15,24 +15,19 @@ export class NotificationsService {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async saveSubscription(userId: number, subscription: any) {
-    try {
-      return await this.prisma.notificationPreference.create({
-        data: {
-          user_id: userId,
-          subscription: JSON.stringify(subscription),
-          pushEnabled: true,
-          daysBeforeNotify: 2
-        }
-      });
-    } catch (error) {
-      if (error.code === 'P2002') { // Código de error de violación única de Prisma
-        // Si ya existe, devolvemos el registro existente sin actualizar
-        return this.prisma.notificationPreference.findUnique({
-          where: { user_id: userId }
-        });
+    return this.prisma.notificationPreference.upsert({
+      where: { user_id: userId },
+      update: {
+        subscription: JSON.stringify(subscription),
+        pushEnabled: true
+      },
+      create: {
+        user_id: userId,
+        subscription: JSON.stringify(subscription),
+        pushEnabled: true,
+        daysBeforeNotify: 2
       }
-      throw error;
-    }
+    });
   }
 
   async sendTestNotification(userId: number) {
@@ -105,7 +100,8 @@ export class NotificationsService {
           notification: {
             title: notification.title,
             body: notification.body,
-            icon: '/assets/icons/icon-72x72.png'
+            icon: 'https://fin-zen.vercel.app/favicon.png',
+            Cron: 'https://fin-zen.vercel.app'
           }
         })
       );
