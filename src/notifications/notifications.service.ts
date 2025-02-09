@@ -1,10 +1,12 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import * as webpush from 'web-push';
-import { Cron } from '@nestjs/schedule';
+import { Cron, CronExpression } from '@nestjs/schedule';
 
 @Injectable()
 export class NotificationsService {
+  private readonly logger = new Logger(NotificationsService.name);
+
   constructor(private prisma: PrismaService) {
     webpush.setVapidDetails(
       'mailto:klebermera2024@gmail.com', // tu correo
@@ -47,7 +49,7 @@ export class NotificationsService {
     }
   }
 
-  @Cron('45 * * * * *')
+  @Cron('0 0 * * *')
   async checkUpcomingPayments() {
     const today = new Date();
     const users = await this.prisma.user.findMany({
@@ -89,6 +91,75 @@ export class NotificationsService {
         }
       }
     }
+  }
+
+  @Cron('0 */2 * * * *') // Ejecutar cada 2 minutos (en el segundo 0)
+  async notifyOverduePayments() {
+    const today = new Date();
+
+    // Consulta usuarios con notificaciones push habilitadas y suscripción válida
+    const users = await this.prisma.user.findMany({
+      where: {
+        notificationPreferences: {
+          pushEnabled: true,
+          subscription: { not: null }
+        },
+        debts: {
+          some: {
+            amortizations: {
+              some: {
+                status: 'Pendiente',
+                date: {
+                  lt: today.toISOString() // Solo cuotas con fecha anterior a hoy
+                }
+              }
+            }
+          }
+        }
+      },
+      include: {
+        debts: {
+          include: {
+            amortizations: {
+              where: {
+                status: 'Pendiente',
+                date: {
+                  lt: today.toISOString() // Filtrar cuotas atrasadas
+                }
+              }
+            }
+          }
+        },
+        notificationPreferences: true
+      }
+    });
+
+    // Iterar sobre los usuarios y enviar notificaciones
+    for (const user of users) {
+      for (const debt of user.debts) {
+        for (const amortization of debt.amortizations) {
+          const paymentDate = new Date(amortization.date);
+          const daysOverdue = Math.floor(
+            (today.getTime() - paymentDate.getTime()) / (1000 * 60 * 60 * 24)
+          );
+
+          // Enviar notificación si la cuota está atrasada
+          await this.sendNotification(
+            JSON.parse(user.notificationPreferences.subscription),
+            {
+              title: 'Cuota Atrasada',
+              body: `Tienes una cuota atrasada de ${amortization.quota} para la deuda "${debt.name}". Está atrasada por ${daysOverdue} días.`
+            }
+          );
+        }
+      }
+    }
+  }
+
+
+  @Cron(CronExpression.EVERY_30_SECONDS)
+  handleCron() {
+    this.logger.debug('Called every 30 seconds');
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
