@@ -100,6 +100,7 @@ export class FirebaseService {
           username: username,
           name: decodedToken.name || null,
           firebaseUid: decodedToken.uid,
+          avatar : decodedToken.picture || null,
           rol_id: 2, // Rol por defecto
           status: true
         },

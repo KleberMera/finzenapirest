@@ -20,6 +20,7 @@ CREATE TABLE "User" (
     "email" TEXT,
     "password" TEXT,
     "phone" TEXT,
+    "avatar" TEXT,
     "firebaseUid" TEXT,
     "status" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
