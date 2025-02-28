@@ -146,9 +146,92 @@ export class TicketsService {
   
 
 
-  async explainAI(): Promise<string> {
-    const prompt = "Hola bienvenido a la sección de tickets, ¿en qué puedes ayudarme?";
-    return this.generativeAIService.generateContent(prompt);
+  async processTextTransaction(userId: number, text: string) {
+    // 1️⃣ Generar el prompt
+    const prompt = this.getTextAnalysisPrompt(text);
+
+    // 2️⃣ Pedir a la IA que analice el texto
+    const extractedText = await this.generativeAIService.generateContent(prompt);
+
+    // 3️⃣ Parsear la respuesta de la IA
+    const {
+      amount,
+      description,
+      type,
+      date,
+      time,
+      categoryName,
+      icon,
+      nameTransaction,
+    } = this.parseExtractedText(extractedText);
+
+    // 4️⃣ Verificar o crear la categoría
+    let category = await this.prisma.category.findFirst({
+      where: {
+        user_id: userId,
+        name: categoryName,
+      },
+    });
+
+    if (!category) {
+      category = await this.prisma.category.create({
+        data: {
+          user_id: userId,
+          name: categoryName,
+          type: type === 'ingreso' ? 'Ingreso' : 'Gasto',
+          icon,
+        },
+      });
+    }
+
+    // 5️⃣ Crear la transacción
+    const transaction = await this.prisma.transaction.create({
+      data: {
+        category_id: category.id,
+        name: nameTransaction,
+        description: description,
+        amount: parseFloat(amount),
+        date,
+        time,
+      },
+    });
+
+    return transaction;
+  }
+
+  /**
+   * Genera el prompt que se le enviará a la IA para extraer información
+   * de un texto libre ingresado por el usuario.
+   */
+  private getTextAnalysisPrompt(userText: string): string {
+    return `
+      Analiza el siguiente texto de un usuario y extrae la siguiente información:
+
+      Texto: "${userText}"
+
+      De este texto, identifica:
+      1. Monto de la transacción (por ejemplo, "200").
+      2. Tipo de transacción ("ingreso" o "gasto").
+      3. Fecha de la transacción en formato "YYYY-MM-DD" (usa la fecha actual si no se menciona).
+      4. Hora de la transacción en formato "HH:mm" (usa la hora actual si no se menciona).
+      5. Categoría sugerida para la transacción (por ejemplo, "Ventas", "Servicios", "Recargas", etc.).
+      6. Ícono sugerido de PrimeNG (por ejemplo, "pi pi-wallet", "pi pi-shopping-cart", "pi pi-dollar").
+      7. Nombre de la transacción (algo breve que describa la operación).
+      8. Descripción más detallada.
+
+      Devuelve la información en formato JSON (sin texto adicional), de la siguiente forma:
+
+      {
+        "amount": "200",
+        "type": "ingreso",
+        "date": "2025-03-01",
+        "time": "10:30",
+        "categoryName": "Ventas",
+        "icon": "pi pi-wallet",
+        "nameTransaction": "Venta de sitio web",
+        "description": "Ingreso de 200 dólares por vender un sitio web estático"
+      }
+    `;
   }
 
 }

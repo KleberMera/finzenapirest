@@ -1,4 +1,11 @@
-import { Controller, Get, Param, Post, UploadedFile, UseInterceptors } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Param,
+  Post,
+  UploadedFile,
+  UseInterceptors,
+} from '@nestjs/common';
 import { TicketsService } from './tickets.service';
 import { FileInterceptor } from '@nestjs/platform-express';
 
@@ -6,9 +13,19 @@ import { FileInterceptor } from '@nestjs/platform-express';
 export class TicketsController {
   constructor(private readonly ticketsService: TicketsService) {}
 
-  @Get('explain-ai')
-  async explainAI(): Promise<string> {
-    return this.ticketsService.explainAI();
+  // @Get('explain-ai')
+  // async explainAI(): Promise<string> {
+  //   return this.ticketsService.explainAI();
+  // }
+
+  // En tu controlador, podrías hacer:
+  @Post('process-text/:userId')
+  async processText(
+    @Param('userId') userId: string, // recíbe como string
+    @Body() body: { text: string },
+  ) {
+    const id = parseInt(userId, 10);
+    return this.ticketsService.processTextTransaction(id, body.text);
   }
 
   @Post('process-receipt/:userId')
