@@ -16,21 +16,39 @@ export class TicketsService {
     // Nuevo prompt con formato JSON para mayor claridad y parseo automático
     const prompt = `
       Analiza la imagen del recibo proporcionada y extrae la siguiente información:
-      
-      1. "amount": El monto total en dólares (por ejemplo, "30"). Si no se detecta, usa "0".
-      2. "description": Una breve descripción de la compra o servicio (por ejemplo, "Compra de alimento para perro cachorro en Tiendas Tuti").
-      3. "type": El tipo de transacción, que puede ser "ingreso" o "gasto". Si no se determina, asume "gasto".
-      4. "date": La fecha de la transacción en formato "YYYY-MM-DD". Si no se encuentra, utiliza la fecha actual.
-      5. "time": La hora de la transacción en formato "HH:mm". Si no se encuentra, utiliza la hora actual.
-      6. "categoryName": La categoría sugerida para clasificar el recibo (por ejemplo, "Supermercado", "Entretenimiento", "Mascotas/Alimentos", etc.).
-      7. "icon": El nombre de un ícono de PrimeNG que represente la categoría (por ejemplo, "pi pi-shopping-cart", "pi pi pi-folder", "pi pi-home").
-      8. "nameTransaction": Un título corto para identificar la transacción (por ejemplo, "Compra en Tiendas Tuti").
+      1. "items": Un arreglo (array) con el detalle de cada producto o servicio encontrado.  
+         - Cada elemento del arreglo debe contener:
+            - "name": Nombre del producto (por ejemplo, "Detergente en polvo").
+            - "quantity": Cantidad comprada (por ejemplo, "2").
+            - "unitPrice": Precio unitario (por ejemplo, "1.35").
+      2. "amount": El monto total en dólares (por ejemplo, "30"). Si no se detecta, usa "0".
+      3. "description": Una descripción general de la compra, donde incluyas un resumen de los artículos.  
+         - Por ejemplo:  
+            "Compra de varios artículos en Tiendas Tuti:\n- 2 Detergente en polvo (1.35 c/u)\n- 1 Harina (0.60)\n..."
+      4. "type": El tipo de transacción, que puede ser "ingreso" o "gasto". Si no se determina, asume "gasto".
+      5. "date": La fecha de la transacción en formato "YYYY-MM-DD". Si no se encuentra, utiliza la fecha actual.
+      6. "time": La hora de la transacción en formato "HH:mm". Si no se encuentra, utiliza la hora actual.
+      7. "categoryName": La categoría sugerida para clasificar el recibo (por ejemplo, "Supermercado", "Entretenimiento", "Mascotas/Alimentos", etc.).
+      8. "icon": El nombre de un ícono de PrimeNG que represente la categoría (por ejemplo, "pi pi-shopping-cart", "pi pi pi-folder", "pi pi-home").
+      9. "nameTransaction": Un título corto para identificar la transacción (por ejemplo, "Compra en Tiendas Tuti").
   
       Devuelve la información en formato JSON exactamente de la siguiente manera:
   
       {
+        "items": [
+          {
+            "name": "Detergente en polvo",
+            "quantity": "2",
+            "unitPrice": "1.35"
+          },
+          {
+            "name": "Harina",
+            "quantity": "1",
+            "unitPrice": "0.60"
+          }
+        ],
         "amount": "30",
-        "description": "Compra de alimento para perro cachorro en Tiendas Tuti",
+        "description": "Compra de varios artículos en Tiendas Tuti:\n- 2 Detergente en polvo (1.35 c/u)\n- 1 Harina (0.60)\n...",
         "type": "gasto",
         "date": "2023-10-05",
         "time": "14:30",
@@ -92,6 +110,7 @@ export class TicketsService {
   }
   
   private parseExtractedText(text: string): {
+    items: { name: string; quantity: string; unitPrice: string }[];
     amount: string;
     description: string;
     type: string;
@@ -109,6 +128,7 @@ export class TicketsService {
     try {
       const data = JSON.parse(jsonMatch[0]);
       return {
+        items: data.items || [],
         amount: data.amount || '0',
         description: data.description || 'Sin descripción',
         type: (data.type || 'gasto').toLowerCase(),
