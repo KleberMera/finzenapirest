@@ -6,4 +6,5 @@ export interface TransactionDTO {
   description: string;
   amount: Decimal;
   date: string;
+  time: string;
 }

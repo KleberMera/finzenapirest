@@ -63,6 +63,7 @@ CREATE TABLE "Transaction" (
     "description" TEXT,
     "amount" DECIMAL(65,30) NOT NULL,
     "date" TEXT NOT NULL,
+    "time" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
