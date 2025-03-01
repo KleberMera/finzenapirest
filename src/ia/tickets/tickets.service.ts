@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { GenerativeAiService } from '../google/generative-ai/generative-ai.service';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { format } from "@formkit/tempo"
+import { log } from 'console';
 
 
 @Injectable()
@@ -26,8 +28,8 @@ export class TicketsService {
          - Por ejemplo:  
             "Compra de varios artículos en Tiendas Tuti:\n- 2 Detergente en polvo (1.35 c/u)\n- 1 Harina (0.60)\n..."
       4. "type": El tipo de transacción, que puede ser "ingreso" o "gasto". Si no se determina, asume "gasto".
-      5. "date": La fecha de la transacción en formato "YYYY-MM-DD". Si no se encuentra, utiliza la fecha actual.
-      6. "time": La hora de la transacción en formato "HH:mm". Si no se encuentra, utiliza la hora actual.
+      5. "date": La fecha de la transacción en formato "YYYY-MM-DD". Si no se encuentra, utiliza la fecha actual o deja en blanco.
+      6. "time": La hora de la transacción en formato "HH:mm". Si no se encuentra, utiliza la hora actual o deja en blanco.
       7. "categoryName": La categoría sugerida para clasificar el recibo (por ejemplo, "Supermercado", "Entretenimiento", "Mascotas/Alimentos", etc.).
       8. "icon": El nombre de un ícono de PrimeNG que represente la categoría (por ejemplo, "pi pi-shopping-cart", "pi pi pi-folder", "pi pi-home").
       9. "nameTransaction": Un título corto para identificar la transacción (por ejemplo, "Compra en Tiendas Tuti").
@@ -127,13 +129,17 @@ export class TicketsService {
     }
     try {
       const data = JSON.parse(jsonMatch[0]);
+      const l = "es"
+      const t = new Date()
+      const datenew = format(t, "YYYY-MM-DD", l)
+      const timenew = format(t, "h:mm:ss", l)
       return {
         items: data.items || [],
         amount: data.amount || '0',
         description: data.description || 'Sin descripción',
         type: (data.type || 'gasto').toLowerCase(),
-        date: data.date || new Date().toISOString().split('T')[0],
-        time: data.time || new Date().toISOString().split('T')[1].substring(0, 5),
+        date: data.date || datenew,
+        time: data.time || timenew,
         categoryName: data.categoryName || 'Otros',
         icon: data.icon || 'pi pi-folder',
         nameTransaction: data.nameTransaction || 'Sin nombre',
@@ -149,10 +155,11 @@ export class TicketsService {
   async processTextTransaction(userId: number, text: string) {
     // 1️⃣ Generar el prompt
     const prompt = this.getTextAnalysisPrompt(text);
+    log('prompt', prompt);
 
     // 2️⃣ Pedir a la IA que analice el texto
     const extractedText = await this.generativeAIService.generateContent(prompt);
-
+    log(extractedText);
     // 3️⃣ Parsear la respuesta de la IA
     const {
       amount,
@@ -186,6 +193,7 @@ export class TicketsService {
 
     // 5️⃣ Crear la transacción
     const transaction = await this.prisma.transaction.create({
+      
       data: {
         category_id: category.id,
         name: nameTransaction,
@@ -209,27 +217,45 @@ export class TicketsService {
 
       Texto: "${userText}"
 
-      De este texto, identifica:
-      1. Monto de la transacción (por ejemplo, "200").
-      2. Tipo de transacción ("ingreso" o "gasto").
-      3. Fecha de la transacción en formato "YYYY-MM-DD" (usa la fecha actual si no se menciona).
-      4. Hora de la transacción en formato "HH:mm" (usa la hora actual si no se menciona).
-      5. Categoría sugerida para la transacción (por ejemplo, "Ventas", "Servicios", "Recargas", etc.).
-      6. Ícono sugerido de PrimeNG (por ejemplo, "pi pi-wallet", "pi pi-shopping-cart", "pi pi-dollar").
-      7. Nombre de la transacción (algo breve que describa la operación).
-      8. Descripción más detallada.
-
-      Devuelve la información en formato JSON (sin texto adicional), de la siguiente forma:
-
+     1. "items": Un arreglo (array) con el detalle de cada producto o servicio encontrado.  
+         - Cada elemento del arreglo debe contener:
+            - "name": Nombre del producto (por ejemplo, "Detergente en polvo").
+            - "quantity": Cantidad comprada (por ejemplo, "2").
+            - "unitPrice": Precio unitario (por ejemplo, "1.35").
+      2. "amount": El monto total en dólares (por ejemplo, "30"). Si no se detecta, usa "0".
+      3. "description": Una descripción general de la compra, donde incluyas un resumen de los artículos.  
+         - Por ejemplo:  
+            "Compra de varios artículos en Tiendas Tuti:\n- 2 Detergente en polvo (1.35 c/u)\n- 1 Harina (0.60)\n..."
+      4. "type": El tipo de transacción, que puede ser "ingreso" o "gasto". Si no se determina, asume "gasto".
+      5. "date": La fecha de la transacción en formato "YYYY-MM-DD". Si no se encuentra, utiliza la fecha actual o deja en blanco.
+      6. "time": La hora de la transacción en formato "HH:mm". Si no se encuentra, utiliza la hora actual o deja en blanco.
+      7. "categoryName": La categoría sugerida para clasificar el recibo (por ejemplo, "Supermercado", "Entretenimiento", "Mascotas/Alimentos", etc.).
+      8. "icon": El nombre de un ícono de PrimeNG que represente la categoría (por ejemplo, "pi pi-shopping-cart", "pi pi pi-folder", "pi pi-home").
+      9. "nameTransaction": Un título corto para identificar la transacción (por ejemplo, "Compra en Tiendas Tuti").
+  
+      Devuelve la información en formato JSON exactamente de la siguiente manera:
+  
       {
-        "amount": "200",
-        "type": "ingreso",
-        "date": "2025-03-01",
-        "time": "10:30",
-        "categoryName": "Ventas",
-        "icon": "pi pi-wallet",
-        "nameTransaction": "Venta de sitio web",
-        "description": "Ingreso de 200 dólares por vender un sitio web estático"
+        "items": [
+          {
+            "name": "Detergente en polvo",
+            "quantity": "2",
+            "unitPrice": "1.35"
+          },
+          {
+            "name": "Harina",
+            "quantity": "1",
+            "unitPrice": "0.60"
+          }
+        ],
+        "amount": "30",
+        "description": "Compra de varios artículos en Tiendas Tuti:\n- 2 Detergente en polvo (1.35 c/u)\n- 1 Harina (0.60)\n...",
+        "type": "gasto",
+        "date": "2023-10-05",
+        "time": "14:30",
+        "categoryName": "Mascotas/Alimentos",
+        "icon": "pi pi-folder",
+        "nameTransaction": "Compra en Tiendas Tuti"
       }
     `;
   }
