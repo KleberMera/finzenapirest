@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
 import { TransactionService } from './transaction.service';
 import { TransactionDTO } from 'src/models/trasaction.interface';
 
@@ -14,5 +14,11 @@ export class TransactionController {
   @Post()
   async createTransaction(@Body() transaction: TransactionDTO) {
     return await this.transactionService.createTransaction(transaction);
+  }
+
+
+  @Delete('user/delete/:id')
+  async deleteTransaction(@Param('id') id: string) {
+    return await this.transactionService.deleteTransactionById(Number(id));
   }
 }

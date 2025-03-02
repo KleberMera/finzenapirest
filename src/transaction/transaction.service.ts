@@ -38,4 +38,21 @@ export class TransactionService {
       throw new Error(`Error al crear la transacción: ${error.message}`);
     }
   }
+
+  async deleteTransactionById(id: number) {
+    try {
+      const deletedTransaction = await this.prismaService.transaction.delete({
+        where: { id },
+      });
+      return {
+        message: 'Transacción eliminada con éxito',
+        data: deletedTransaction,
+      };
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error(`Error al eliminar la transacción: ${error.message}`);
+    }
+  }
 }
