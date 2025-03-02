@@ -99,15 +99,18 @@ export class TicketsService {
     // Paso 4: Guardar la transacción
     const transaction = await this.prisma.transaction.create({
       data: {
-        category_id: category.id,
-        name: nameTransaction,
-        description: description,
-        amount: parseFloat(amount),
-        date,
-        time,
+      category_id: category.id,
+      name: nameTransaction,
+      description: description,
+      amount: parseFloat(amount),
+      date,
+      time,
       },
+      include: {
+      category: true // Incluir los datos de la categoría relacionada
+      }
     });
-  
+    
     return transaction;
   }
   
@@ -202,9 +205,16 @@ export class TicketsService {
         date,
         time,
       },
+      include: {
+        category: true // Incluir los datos de la categoría relacionada
+        }
     });
 
-    return transaction;
+    return {
+      message: 'Transacción creada exitosamente',
+      transaction: transaction,
+      status: 200
+    };
   }
 
   /**
