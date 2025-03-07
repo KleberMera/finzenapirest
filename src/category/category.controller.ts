@@ -11,6 +11,11 @@ export class CategoryController {
     return await this.categoryService.getCategoryById(Number(id));
   }
 
+  @Get('user/name/:userId')
+  async getCategoriesByUserIdName(@Param('userId') userId: string) {
+    return await this.categoryService.getCategoriesByUserIdName(Number(userId));
+  }
+
   @Get()
   async getCategory() {
     return await this.categoryService.getCategory();
@@ -30,4 +35,6 @@ export class CategoryController {
   async deleteCategory(@Param('id') id: string) {
     return await this.categoryService.deleteCategory(Number(id));
   }
+
+
 }

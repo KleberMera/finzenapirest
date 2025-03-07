@@ -98,4 +98,30 @@ export class CategoryService {
       throw new Error(`Error al eliminar la categoría: ${error.message}`);
     }
   }
+
+
+  //Listar categorias por usuario solo el nombre y el id de la categoria
+  async getCategoriesByUserIdName(userId: number) {
+    try {
+      const categories = await this.prismaService.category.findMany({
+        where: {
+          user_id: userId,
+        },
+        select: {
+          id: true,
+          name: true,
+        },
+      });
+
+      return {
+        message: 'Categorías cargadas con éxito',
+        data: categories,
+      };
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error(`Error al cargar las categorías: ${error.message}`);
+    }
+  }
 }
