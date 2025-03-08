@@ -1,4 +1,6 @@
+import { format } from '@formkit/tempo';
 import { Injectable } from '@nestjs/common';
+import { log } from 'console';
 import { TransactionDTO } from 'src/models/trasaction.interface';
 import { PrismaService } from 'src/prisma/prisma.service';
 
@@ -146,9 +148,11 @@ export class TransactionService {
   
     // Filtro por hoy
     if (today) {
-      const currentDate = new Date();
-      const formattedDate = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
-      where.date = formattedDate;
+      const l = "es"
+      const t = new Date()
+      const datenew = format(t, "YYYY-MM-DD", l)
+      log('today', datenew)
+      where.date = datenew;
     }
   
     // Filtro por rango de fechas
@@ -189,11 +193,13 @@ export class TransactionService {
     return {
       message: 'Transacciones cargadas con éxito',
       data: transactions,
+      
       pagination: {
-        total,
-        page: all ? 1 : Number(page),
-        limit: all ? total : Number(limit),
-        totalPages,
+      total,
+      page: all ? 1 : Number(page),
+      limit: all ? total : Number(limit),
+      totalPages,
+      count: transactions.length,
       },
     };
   }
