@@ -110,6 +110,8 @@ export class CategoryService {
         select: {
           id: true,
           name: true,
+          type: true,
+          icon: true
         },
       });
 
@@ -124,4 +126,33 @@ export class CategoryService {
       throw new Error(`Error al cargar las categorías: ${error.message}`);
     }
   }
+
+
+    //Listar categorias por usuario solo el nombre y el id de la categoria
+    async getCategoriesByUserIde(userId: number, type?: string) {
+      try {
+        const categories = await this.prismaService.category.findMany({
+          where: {
+            user_id: userId,
+            ...(type && { type: type }),
+          },
+          select: {
+            id: true,
+            name: true,
+            type: true,
+            icon: true
+          },
+        });
+
+        return {
+          message: 'Categorías cargadas con éxito',
+          data: categories,
+        };
+      } catch (error) {
+        if (error instanceof Error) {
+          throw error;
+        }
+        throw new Error(`Error al cargar las categorías: ${error.message}`);
+      }
+    }
 }

@@ -37,4 +37,10 @@ export class CategoryController {
   }
 
 
+  @Get('user/type/:userId/:type')
+  async getCategoriesByType(@Param('userId') userId: string, @Param('type') type: string) {
+    return await this.categoryService.getCategoriesByUserIde(Number(userId), type);
+  }
+
+
 }
