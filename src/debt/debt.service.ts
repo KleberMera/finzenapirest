@@ -254,4 +254,67 @@ export class DebtService {
       data: updatedDebt
     };
   }
+
+
+  ///Listar solo el nombre de la deuda con su id, por el id de usuario
+  async getDebtByUserIdName(userId: number) {
+    try {
+      const debts = await this.prismaService.debt.findMany({
+        where: {
+          user_id: userId,
+        },
+        select: {
+          id: true,
+          name: true,
+        },
+      });
+
+      return {
+        message: 'Deudas cargadas con éxito',
+        data: debts,
+      };
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error(`Error al cargar las deudas: ${error.message}`);
+    }
+  }
+
+
+  //Listar por id de deuda sus deuda con su amortizaciones
+  async getDebtById(id: number) {
+    try {
+      const debt = await this.prismaService.debt.findUnique({
+        where: {
+          id: id,
+        },
+        include: {
+          amortizations: true,
+        },
+      });
+
+      if (!debt) {
+        throw new NotFoundException(`Deuda con ID ${id} no encontrada`);
+      }
+
+      // Remove timestamps
+      delete debt.createdAt;
+      delete debt.updatedAt;
+      debt.amortizations.forEach((amortization) => {
+        delete amortization.createdAt;
+        delete amortization.updatedAt;
+      });
+
+      return {
+        message: 'Deuda cargada con éxito',
+        data: [debt],
+      };
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error(`Error al cargar la deuda: ${error.message}`);
+    }
+  }
 }

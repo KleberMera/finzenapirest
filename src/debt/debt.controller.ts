@@ -46,4 +46,18 @@ export class DebtController {
   async updateDebtAmortizations(@Body() updateDto: UpdateDebtAmortizationsDto) {
     return await this.debtService.updateDebtAmortizations(updateDto);
   }
+
+
+
+  //Listar solo el nombre de la deuda con su id, por el id de usuario
+  @Get('user/:userId/name')
+  async getDebtByUserIdName(@Param('userId') userId: string) {
+    return await this.debtService.getDebtByUserIdName(Number(userId));
+  }
+
+  //Listar por id de deuda sus deuda con su amortizaciones
+  @Get('user/amortizations/:id')
+  async getDebtById(@Param('id', ParseIntPipe) id: number) {
+    return await this.debtService.getDebtById(Number(id));
+  }
 }
