@@ -10,6 +10,8 @@
   "license": "UNLICENSED",
   "scripts": {
     "build": "nest build",
+    "postinstall": "prisma generate",
+
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "node --max-old-space-size=4096 node_modules/.bin/nest start",
     "start:dev": "nest start --watch",
