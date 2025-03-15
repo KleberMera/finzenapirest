@@ -11,7 +11,6 @@
   "scripts": {
     "build": "nest build",
     "postinstall": "prisma generate",
-
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "node --max-old-space-size=4096 node_modules/.bin/nest start",
     "start:dev": "nest start --watch",
@@ -37,7 +36,7 @@
     "@nestjs/schedule": "^5.0.1",
     "@prisma/client": "^6.4.1",
     "axios": "^1.7.9",
-    "bcrypt": "^5.1.1",
+    "bcryptjs": "^3.0.2",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
     "firebase-admin": "^13.1.0",

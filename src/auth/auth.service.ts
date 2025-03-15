@@ -4,8 +4,19 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { compare } from 'bcrypt';
-import { encrypt } from 'src/libs/bcrypt';
+
+import * as bcrypt from 'bcryptjs';
+
+const saltOrRounds = 10;
+
+const encrypt = async (password: string, salt = saltOrRounds) => {
+  return await bcrypt.hash(password, salt);
+};
+
+const compare = async (password: string, hash: string) => {
+  return await bcrypt.compare(password, hash);
+};
+
 import { UserDTO } from 'src/models/user.interface';
 import { PrismaService } from 'src/prisma/prisma.service';
 
