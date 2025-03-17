@@ -41,6 +41,7 @@ model User {
   updatedAt               DateTime                @updatedAt
   categories              Category[]
   debts                   Debt[]
+  metas                   Meta[]
 }
 
 model NotificationPreference {
@@ -110,4 +111,31 @@ model Amortization {
   status        String?  @default("Pendiente")
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+}
+
+
+model Meta {
+  id             Int              @id @default(autoincrement())
+  user_id        Int
+  user           User             @relation(fields: [user_id], references: [id])
+  name           String
+  description    String?
+  target_amount  Decimal          // Monto objetivo
+  deadline       String?        // Fecha límite para alcanzar la meta
+  status         String           @default("Active") // Active, Completed, Cancelled
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  trackings      MetaTracking[]   // Relación con los seguimientos
+}
+
+
+model MetaTracking {
+  id          Int      @id @default(autoincrement())
+  meta_id     Int
+  meta        Meta     @relation(fields: [meta_id], references: [id])
+  amount      Decimal  // Monto aportado en este seguimiento
+  note        String?  // Nota opcional del aporte (ej: "Primer aporte")
+  date        String  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

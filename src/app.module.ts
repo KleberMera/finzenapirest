@@ -13,13 +13,14 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { BalanceModule } from './balance/balance.module';
 import { TicketsModule } from './ia/tickets/tickets.module';
+import { MetaModule } from './meta/meta.module';
 
 
 @Module({
   imports: [
     ConfigModule.forRoot(),
     ScheduleModule.forRoot(),
-    AuthModule, PrismaModule, CategoryModule, TransactionModule, DebtModule, DniModule, FirebaseModule, NotificationsModule, BalanceModule, TicketsModule],
+    AuthModule, PrismaModule, CategoryModule, TransactionModule, DebtModule, DniModule, FirebaseModule, NotificationsModule, BalanceModule, TicketsModule, MetaModule],
   controllers: [AppController],
   providers: [AppService],
 })
