@@ -148,9 +148,13 @@ export class TransactionService {
   
     // Filtro por hoy
     if (today) {
-      const l = "es"
-      const t = new Date()
-      const datenew = format(t, "YYYY-MM-DD", l)
+      //const l = "es"
+      const date = new Date()
+      const datenew = format({
+        date,
+        format: "YYYY-MM-DD",
+        tz: "America/Guayaquil",
+      })
       log('today', datenew)
       where.date = datenew;
     }
