@@ -295,7 +295,7 @@ export class DebtService {
       });
 
       if (!debt) {
-        throw new NotFoundException(`Deuda con ID ${id} no encontrada`);
+        throw new NotFoundException(`Seleccione una deuda`);
       }
 
       // Remove timestamps
