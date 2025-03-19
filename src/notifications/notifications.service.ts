@@ -100,7 +100,7 @@ export class NotificationsService {
     });
     return {
        message: 'Notificaciones recibidas',
-       notifications: notifications
+       data: notifications
       
     };
   }
