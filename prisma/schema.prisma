@@ -42,17 +42,29 @@ model User {
   categories              Category[]
   debts                   Debt[]
   metas                   Meta[]
+  notifications           Notification[]
 }
 
 model NotificationPreference {
-  id                Int      @id @default(autoincrement())
-  user_id          Int      @unique
-  user             User     @relation(fields: [user_id], references: [id])
-  pushEnabled      Boolean  @default(false)
-  daysBeforeNotify Int      @default(2)
-  subscription     String?  // Guardamos la suscripción como string (JSON)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id           Int      @id @default(autoincrement())
+  user_id      Int      @unique
+  user         User     @relation(fields: [user_id], references: [id])
+  pushEnabled  Boolean  @default(false)
+  subscription String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+model Notification {
+  id        Int      @id @default(autoincrement())
+  user_id   Int
+  user      User     @relation(fields: [user_id], references: [id])
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  debt_id   Int?
+  debt      Debt?    @relation(fields: [debt_id], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Category {
@@ -93,9 +105,12 @@ model Debt {
   start_date      String?
   end_date        String?
   status          String?        @default("Pendiente")
+  notifyEnabled   Boolean?        @default(false)
+  daysBeforeNotify Int?           @default(0)
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
   amortizations   Amortization[]
+  notifications   Notification[]
 }
 
 model Amortization {

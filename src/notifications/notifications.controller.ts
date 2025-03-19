@@ -1,4 +1,4 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 
@@ -15,10 +15,16 @@ export class NotificationsController {
     return this.notificationsService.saveSubscription(data.userId, data.subscription);
   }
 
+
+
   @Post('test')
   async test(@Body() { userId }: { userId: number }) {
     return this.notificationsService.sendTestNotification(userId);
   }
 
+  @Get('user/:userId')
+  async getNotifications(@Param() { userId }: { userId: number }) {
+    return this.notificationsService.getNotificationsByUserId(Number(userId));
+  }
 
 }
