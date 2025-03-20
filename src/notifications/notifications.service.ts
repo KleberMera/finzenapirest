@@ -122,7 +122,7 @@ export class NotificationsService {
   }
 
 
-  async hasSubscription(userId: number): Promise<boolean> {
+  async hasSubscription(userId: number) {
     const count = await this.prisma.notificationPreference.count({
       where: {
         user_id: userId,
@@ -130,7 +130,7 @@ export class NotificationsService {
       },
     });
 
-    return count > 0;
+    return { hasSubscription: count > 0 };
   }
 
 
