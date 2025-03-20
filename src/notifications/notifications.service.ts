@@ -18,12 +18,12 @@ export class NotificationsService {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async saveSubscription(userId: number, subscription: any) {
-  // Verificar cuántas suscripciones tiene el usuario actualmente
+  // Contar las suscripciones activas del usuario
   const currentSubscriptions = await this.prisma.notificationPreference.count({
-    where: { user_id: userId },
+    where: { user_id: userId, pushEnabled: true }, // Contar solo las activas
   });
 
-  // Si el usuario ya tiene 2 suscripciones, lanzar un error
+  // Si ya tiene 2 suscripciones activas, lanzar un error
   if (currentSubscriptions >= 2) {
     throw new Error('El usuario ya tiene el máximo de dos suscripciones permitidas.');
   }
@@ -31,7 +31,7 @@ async saveSubscription(userId: number, subscription: any) {
   // Convertir la suscripción a string
   const subscriptionString = JSON.stringify(subscription);
 
-  // Verificar si esta suscripción específica ya existe para evitar duplicados
+  // Verificar si esta suscripción ya existe
   const existingPreference = await this.prisma.notificationPreference.findFirst({
     where: {
       user_id: userId,
@@ -39,18 +39,50 @@ async saveSubscription(userId: number, subscription: any) {
     },
   });
 
+  let notificationContent;
+
   if (existingPreference) {
-    // Si la suscripción ya existe, actualizar solo si pushEnabled estaba desactivado
+    // Si existe pero estaba desactivada, reactivarla
     if (!existingPreference.pushEnabled) {
       await this.prisma.notificationPreference.update({
         where: { id: existingPreference.id },
         data: { pushEnabled: true },
       });
+
+      // Determinar si es la primera o segunda suscripción activa
+      const updatedSubscriptions = await this.prisma.notificationPreference.count({
+        where: { user_id: userId, pushEnabled: true },
+      });
+
+      if (updatedSubscriptions === 1) {
+        notificationContent = {
+          title: 'Notificaciones Activadas',
+          body: 'A partir de ahora recibirás notificaciones.',
+        };
+      } else if (updatedSubscriptions === 2) {
+        notificationContent = {
+          title: 'Segunda Suscripción Activada',
+          body: '¡Recibirás notificaciones en este segundo dispositivo!',
+        };
+      }
+
+      // Enviar y guardar la notificación
+      if (notificationContent) {
+        await this.sendNotification(subscription, notificationContent);
+        await this.prisma.notification.create({
+          data: {
+            user_id: userId,
+            title: notificationContent.title,
+            message: notificationContent.body,
+            isRead: false,
+          },
+        });
+      }
     }
     return existingPreference;
   }
 
-  // Crear la nueva suscripción
+  // Crear una nueva suscripción
   const newPreference = await this.prisma.notificationPreference.create({
     data: {
       user_id: userId,
@@ -59,20 +91,27 @@ async saveSubscription(userId: number, subscription: any) {
     },
   });
 
-  // Verificar si es la segunda suscripción
+  // Contar las suscripciones activas después de crear la nueva
   const updatedSubscriptions = await this.prisma.notificationPreference.count({
-    where: { user_id: userId },
+    where: { user_id: userId, pushEnabled: true },
   });
 
-  if (updatedSubscriptions === 2) {
-    // Enviar notificación solo a la segunda suscripción
-    const notificationContent = {
-      title: 'Activación de Notificación',
+  // Determinar el mensaje de notificación
+  if (updatedSubscriptions === 1) {
+    notificationContent = {
+      title: 'Notificaciones Activadas',
+      body: 'A partir de ahora recibirás notificaciones.',
+    };
+  } else if (updatedSubscriptions === 2) {
+    notificationContent = {
+      title: 'Segunda Suscripción Activada',
       body: '¡Recibirás notificaciones en este segundo dispositivo!',
     };
-    await this.sendNotification(subscription, notificationContent);
+  }
 
-    // Guardar la notificación en la base de datos
+  // Enviar y guardar la notificación
+  if (notificationContent) {
+    await this.sendNotification(subscription, notificationContent);
     await this.prisma.notification.create({
       data: {
         user_id: userId,
