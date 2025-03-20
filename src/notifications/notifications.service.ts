@@ -15,65 +15,103 @@ export class NotificationsService {
     );
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async saveSubscription(userId: number, subscription: any) {
-    // Verifica si el usuario ya tiene una suscripción previa
-    const existingPreference = await this.prisma.notificationPreference.findUnique({
-      where: { user_id: userId },
-    });
-  
-    // Actualiza o crea la suscripción
-    const preference = await this.prisma.notificationPreference.upsert({
-      where: { user_id: userId },
-      update: {
-        subscription: JSON.stringify(subscription),
-        pushEnabled: true,
-      },
-      create: {
-        user_id: userId,
-        subscription: JSON.stringify(subscription),
-        pushEnabled: true,
-      },
-    });
-  
-    // Envía la notificación de bienvenida solo si es una nueva suscripción
-    if (!existingPreference) {
-      const notificationContent = {
-        title: 'Activación de Notificación',
-        body: '¡Recibirás notificaciones a partir de ahora!',
-      };
-      await this.sendNotification(subscription, notificationContent);
-  
-      // Guarda la notificación en la base de datos
-      await this.prisma.notification.create({
-        data: {
-          user_id: userId,
-          title: notificationContent.title,
-          message: notificationContent.body,
-          isRead: false,
-        },
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async saveSubscription(userId: number, subscription: any) {
+  // Verificar cuántas suscripciones tiene el usuario actualmente
+  const currentSubscriptions = await this.prisma.notificationPreference.count({
+    where: { user_id: userId },
+  });
+
+  // Si el usuario ya tiene 2 suscripciones, lanzar un error
+  if (currentSubscriptions >= 2) {
+    throw new Error('El usuario ya tiene el máximo de dos suscripciones permitidas.');
+  }
+
+  // Convertir la suscripción a string
+  const subscriptionString = JSON.stringify(subscription);
+
+  // Verificar si esta suscripción específica ya existe para evitar duplicados
+  const existingPreference = await this.prisma.notificationPreference.findFirst({
+    where: {
+      user_id: userId,
+      subscription: subscriptionString,
+    },
+  });
+
+  if (existingPreference) {
+    // Si la suscripción ya existe, actualizar solo si pushEnabled estaba desactivado
+    if (!existingPreference.pushEnabled) {
+      await this.prisma.notificationPreference.update({
+        where: { id: existingPreference.id },
+        data: { pushEnabled: true },
       });
     }
-  
-    return preference;
+    return existingPreference;
   }
 
-  async sendTestNotification(userId: number) {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      include: { notificationPreferences: true }
+  // Crear la nueva suscripción
+  const newPreference = await this.prisma.notificationPreference.create({
+    data: {
+      user_id: userId,
+      subscription: subscriptionString,
+      pushEnabled: true,
+    },
+  });
+
+  // Verificar si es la segunda suscripción
+  const updatedSubscriptions = await this.prisma.notificationPreference.count({
+    where: { user_id: userId },
+  });
+
+  if (updatedSubscriptions === 2) {
+    // Enviar notificación solo a la segunda suscripción
+    const notificationContent = {
+      title: 'Activación de Notificación',
+      body: '¡Recibirás notificaciones en este segundo dispositivo!',
+    };
+    await this.sendNotification(subscription, notificationContent);
+
+    // Guardar la notificación en la base de datos
+    await this.prisma.notification.create({
+      data: {
+        user_id: userId,
+        title: notificationContent.title,
+        message: notificationContent.body,
+        isRead: false,
+      },
     });
-
-    if (user?.notificationPreferences?.subscription) {
-      return this.sendNotification(
-        JSON.parse(user.notificationPreferences.subscription),
-        {
-          title: 'Prueba de Notificación',
-          body: '¡Si ves esto, las notificaciones están funcionando!'
-        }
-      );
-    }
   }
+
+  return newPreference;
+}
+
+
+async countSubscriptions(userId: number) {
+  const subscriptions = await this.prisma.notificationPreference.count({
+    where: { user_id: userId },
+  });
+
+  return { subscriptions: subscriptions };
+}
+
+  // async sendTestNotification(userId: number) {
+  //   const user = await this.prisma.user.findUnique({
+  //     where: { id: userId },
+  //     include: { notificationPreferences: true }
+  //   });
+
+  //   if (user?.notificationPreferences?.subscription) {
+  //     return this.sendNotification(
+  //       JSON.parse(user.notificationPreferences.subscription),
+  //       {
+  //         title: 'Prueba de Notificación',
+  //         body: '¡Si ves esto, las notificaciones están funcionando!'
+          
+  //       }
+  //     );
+  //   }
+  // }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private async sendNotification(subscription: any, notification: { title: string; body: string }) {
@@ -106,19 +144,26 @@ export class NotificationsService {
   }
 
   async unsubscribe(userId: number) {
-    // Elimina todas las suscripciones del usuario
-    const result = await this.prisma.notificationPreference.deleteMany({
-      where: {
-        user_id: userId,
-      },
-    });
-
-    // Verifica si se eliminó algo y retorna un mensaje
-    if (result.count === 0) {
-      return { message: 'No se encontraron suscripciones para eliminar' };
+    // Iniciar una transacción para eliminar suscripciones y notificaciones
+    const [deletedPreferences, deletedNotifications] = await this.prisma.$transaction([
+      this.prisma.notificationPreference.deleteMany({
+        where: {
+          user_id: userId,
+        },
+      }),
+      this.prisma.notification.deleteMany({
+        where: {
+          user_id: userId,
+        },
+      }),
+    ]);
+  
+    // Verificar si se eliminó algo
+    if (deletedPreferences.count === 0 && deletedNotifications.count === 0) {
+      return { message: 'No se encontraron suscripciones ni notificaciones para eliminar' };
     }
-
-    return { message: 'Suscripción eliminada con éxito' };
+  
+    return { message: 'Suscripciones y notificaciones eliminadas con éxito' };
   }
 
 
@@ -133,6 +178,62 @@ export class NotificationsService {
     return { hasSubscription: count > 0 };
   }
 
+  private async sendNotificationToUser(userId: number, notification: { title: string; body: string }) {
+    // Buscar todas las suscripciones activas del usuario
+    const preferences = await this.prisma.notificationPreference.findMany({
+      where: {
+        user_id: userId,
+        pushEnabled: true,
+      },
+    });
+  
+    // Enviar la notificación a cada suscripción
+    for (const pref of preferences) {
+      try {
+        const subscription = JSON.parse(pref.subscription);
+        await webpush.sendNotification(
+          subscription,
+          JSON.stringify({
+            notification: {
+              title: notification.title,
+              body: notification.body,
+              icon: 'https://fin-zen.vercel.app/favicon.png',
+            },
+          })
+        );
+      } catch (error) {
+        console.error(`Error enviando notificación a la suscripción ${pref.id}:`, error);
+      }
+    }
+  }
+
+  private async saveNotificationToDatabase(userId: number, notification: { title: string; body: string }) {
+    await this.prisma.notification.create({
+      data: {
+        user_id: userId,
+        title: notification.title,
+        message: notification.body,
+        isRead: false,
+        createdAt: new Date(),
+      },
+    });
+  }
+
+
+  async notifyUser(userId: number, notification: { title: string; body: string }) {
+    try {
+      // Guardar la notificación en la base de datos
+      await this.saveNotificationToDatabase(userId, notification);
+  
+      // Enviar la notificación push
+      await this.sendNotificationToUser(userId, notification);
+  
+      return { message: 'Notificación enviada y guardada con éxito' };
+    } catch (error) {
+      console.error('Error al notificar al usuario:', error);
+      throw new Error('No se pudo enviar ni guardar la notificación');
+    }
+  }
 
   // async unsubscribe(userId: number) {
   //   const result = await this.prisma.notificationPreference.updateMany({

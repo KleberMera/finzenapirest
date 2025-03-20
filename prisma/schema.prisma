@@ -35,7 +35,6 @@ model User {
   phone                   String?
   avatar                  String?
   firebaseUid             String?                 @unique
-  notificationPreferences NotificationPreference?
   status                  Boolean                 @default(true)
   createdAt               DateTime                @default(now())
   updatedAt               DateTime                @updatedAt
@@ -43,11 +42,12 @@ model User {
   debts                   Debt[]
   metas                   Meta[]
   notifications           Notification[]
+  notificationPreferences NotificationPreference[]
 }
 
 model NotificationPreference {
   id           Int      @id @default(autoincrement())
-  user_id      Int      @unique
+  user_id      Int      
   user         User     @relation(fields: [user_id], references: [id])
   pushEnabled  Boolean  @default(false)
   subscription String?
