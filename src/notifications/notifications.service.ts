@@ -126,7 +126,7 @@ export class NotificationsService {
     const count = await this.prisma.notificationPreference.count({
       where: {
         user_id: userId,
-       // pushEnabled: true,
+        pushEnabled: true,
       },
     });
 
