@@ -105,6 +105,52 @@ export class NotificationsService {
     };
   }
 
+  async unsubscribe(userId: number) {
+    // Elimina todas las suscripciones del usuario
+    const result = await this.prisma.notificationPreference.deleteMany({
+      where: {
+        user_id: userId,
+      },
+    });
+
+    // Verifica si se eliminó algo y retorna un mensaje
+    if (result.count === 0) {
+      return { message: 'No se encontraron suscripciones para eliminar' };
+    }
+
+    return { message: 'Suscripción eliminada con éxito' };
+  }
+
+
+  async hasSubscription(userId: number): Promise<boolean> {
+    const count = await this.prisma.notificationPreference.count({
+      where: {
+        user_id: userId,
+       // pushEnabled: true,
+      },
+    });
+
+    return count > 0;
+  }
+
+
+  // async unsubscribe(userId: number) {
+  //   const result = await this.prisma.notificationPreference.updateMany({
+  //     where: {
+  //       user_id: userId,
+  //     },
+  //     data: {
+  //       pushEnabled: false,
+  //     },
+  //   });
+  
+  //   if (result.count === 0) {
+  //     return { message: 'No se encontraron suscripciones para deshabilitar' };
+  //   }
+  
+  //   return { message: 'Suscripción deshabilitada con éxito' };
+  // }
+
   // @Cron('0 0 * * *')
   // async checkUpcomingPayments() {
   //   const today = new Date();

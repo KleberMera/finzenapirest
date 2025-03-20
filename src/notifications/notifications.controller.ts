@@ -1,21 +1,24 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 
-
 @Controller('notifications')
 export class NotificationsController {
-  constructor(private readonly notificationsService: NotificationsService, private prisma: PrismaService) {}
+  constructor(
+    private readonly notificationsService: NotificationsService,
+    private prisma: PrismaService,
+  ) {}
 
   @Post('subscribe')
   async subscribe(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    @Body() data: { userId: number; subscription: any }
+    @Body() data: { userId: number; subscription: any },
   ) {
-    return this.notificationsService.saveSubscription(data.userId, data.subscription);
+    return this.notificationsService.saveSubscription(
+      data.userId,
+      data.subscription,
+    );
   }
-
-
 
   @Post('test')
   async test(@Body() { userId }: { userId: number }) {
@@ -27,4 +30,13 @@ export class NotificationsController {
     return this.notificationsService.getNotificationsByUserId(Number(userId));
   }
 
+  @Delete('unsubscribe/:userId')
+  async unsubscribe(@Param() { userId }: { userId: number }) {
+    return this.notificationsService.unsubscribe(userId);
+  }
+
+  @Get('has-subscription/:userId')
+  async hasSubscription(@Param() { userId }: { userId: number }) {
+    return this.notificationsService.hasSubscription(userId);
+  }
 }

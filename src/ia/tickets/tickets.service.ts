@@ -51,7 +51,7 @@ export class TicketsService {
         ],
         "amount": "30",
         "description": "Compra de varios artículos en Tiendas Tuti:\n- 2 Detergente en polvo (1.35 c/u)\n- 1 Harina (0.60)\n...",
-        "type": "gasto",
+        "type": "Gasto",
         "date": "2023-10-05",
         "time": "14:30",
         "categoryName": "Mascotas/Alimentos",
@@ -90,7 +90,7 @@ export class TicketsService {
         data: {
           user_id: userId,
           name: categoryName,
-          type: type === 'ingreso' ? 'Ingreso' : 'Gasto',
+          type: type === 'Ingreso' ? 'Ingreso' : 'Gasto',
           icon,
         },
       });
@@ -140,7 +140,7 @@ export class TicketsService {
         items: data.items || [],
         amount: data.amount || '0',
         description: data.description || 'Sin descripción',
-        type: (data.type || 'gasto').toLowerCase(),
+        type: (data.type || 'Gasto').toLowerCase(),
         date: data.date || datenew,
         time: data.time || timenew,
         categoryName: data.categoryName || 'Otros',
@@ -188,7 +188,7 @@ export class TicketsService {
         data: {
           user_id: userId,
           name: categoryName,
-          type: type === 'ingreso' ? 'Ingreso' : 'Gasto',
+          type: type === 'Ingreso' ? 'Ingreso' : 'Gasto',
           icon,
         },
       });
@@ -260,7 +260,7 @@ export class TicketsService {
         ],
         "amount": "30",
         "description": "Compra de varios artículos en Tiendas Tuti:\n- 2 Detergente en polvo (1.35 c/u)\n- 1 Harina (0.60)\n...",
-        "type": "gasto",
+        "type": "Gasto",
         "date": "2023-10-05",
         "time": "14:30",
         "categoryName": "Mascotas/Alimentos",
