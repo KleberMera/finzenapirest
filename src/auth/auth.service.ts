@@ -17,7 +17,7 @@ const compare = async (password: string, hash: string) => {
   return await bcrypt.compare(password, hash);
 };
 
-import { UserDTO } from 'src/models/user.interface';
+import { UserDTO, UserDTO2 } from 'src/models/user.interface';
 import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
@@ -69,7 +69,7 @@ export class AuthService {
 
   
 
-  async signUp(user: UserDTO) {
+  async signUp(user: UserDTO2) {
     try {
       const existingUser = await this.prismaService.user.findFirst({
         where: {
