@@ -9,15 +9,18 @@ export class NotificationsController {
     private prisma: PrismaService,
   ) {}
 
-  @Post('subscribe')
+  @Post('subscribe/:userId/:deviceId')
   async subscribe(
+ 
+    @Param() { userId, deviceId }: { userId: number; deviceId: number },
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    @Body() data: { userId: number; subscription: any, deviceId: number }
+    @Body() data: {  subscription: any }
   ) {
     return this.notificationsService.saveSubscription(
-      data.userId,
-      data.subscription,
-      data.deviceId
+      (Number(userId)),
+      (Number(deviceId)), // Correcto: segundo parámetro es deviceId
+      data.subscription // Tercer parámetro es subscription
     );
   }
 
