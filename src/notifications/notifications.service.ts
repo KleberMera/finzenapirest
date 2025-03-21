@@ -37,8 +37,11 @@ async saveSubscription(userId: number, deviceId: number, subscription: any) {
   }
 
   // Convertir la suscripción a string
-  const subscriptionString = JSON.stringify(subscription);
+  const subscriptionObject = typeof subscription === 'string' 
+  ? JSON.parse(subscription) 
+  : subscription;
 
+const subscriptionString = JSON.stringify(subscriptionObject);
   // Verificar si esta suscripción ya existe para este dispositivo
   const existingPreference = await this.prisma.notificationPreference.findFirst({
     where: {
