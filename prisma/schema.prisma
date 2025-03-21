@@ -43,12 +43,31 @@ model User {
   metas                   Meta[]
   notifications           Notification[]
   notificationPreferences NotificationPreference[]
+  devices                 Device[]
 }
 
+model Device {
+  id          Int      @id @default(autoincrement())
+  user_id     Int
+  user        User     @relation(fields: [user_id], references: [id])
+  os          String?
+  browser     String?
+  isMobile    Boolean  @default(false)
+  userAgent   String?
+  brand       String?
+  model       String?
+  status      String   @default("Active")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  notificationPreferences NotificationPreference[] // Nueva relación
+  notifications           Notification[]          // Nueva relación
+}
 model NotificationPreference {
   id           Int      @id @default(autoincrement())
-  user_id      Int      
+  user_id      Int
+  device_id    Int?                             // Nuevo campo
   user         User     @relation(fields: [user_id], references: [id])
+  device       Device?   @relation(fields: [device_id], references: [id]) // Nueva relación
   pushEnabled  Boolean  @default(false)
   subscription String?
   createdAt    DateTime @default(now())
@@ -57,7 +76,9 @@ model NotificationPreference {
 model Notification {
   id        Int      @id @default(autoincrement())
   user_id   Int
+  device_id Int?                              // Nuevo campo (opcional)
   user      User     @relation(fields: [user_id], references: [id])
+  device    Device?  @relation(fields: [device_id], references: [id]) // Nueva relación (opcional)
   title     String
   message   String
   isRead    Boolean  @default(false)
@@ -67,30 +88,6 @@ model Notification {
   updatedAt DateTime @updatedAt
 }
 
-model Category {
-  id           Int           @id @default(autoincrement())
-  user_id      Int
-  user         User          @relation(fields: [user_id], references: [id])
-  name         String?
-  icon         String?
-  type         String        @default("Ingreso")
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  transactions Transaction[]
-}
-
-model Transaction {
-  id          Int      @id @default(autoincrement())
-  category_id Int
-  category    Category @relation(fields: [category_id], references: [id])
-  name        String?
-  description String?
-  amount      Decimal
-  date        String
-  time        String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
 
 model Debt {
   id              Int            @id @default(autoincrement())
@@ -127,6 +124,33 @@ model Amortization {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
+
+model Category {
+  id           Int           @id @default(autoincrement())
+  user_id      Int
+  user         User          @relation(fields: [user_id], references: [id])
+  name         String?
+  icon         String?
+  type         String        @default("Ingreso")
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  transactions Transaction[]
+}
+
+model Transaction {
+  id          Int      @id @default(autoincrement())
+  category_id Int
+  category    Category @relation(fields: [category_id], references: [id])
+  name        String?
+  description String?
+  amount      Decimal
+  date        String
+  time        String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+
 
 
 model Meta {

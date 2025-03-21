@@ -12,11 +12,12 @@ export class NotificationsController {
   @Post('subscribe')
   async subscribe(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    @Body() data: { userId: number; subscription: any },
+    @Body() data: { userId: number; subscription: any, deviceId: number }
   ) {
     return this.notificationsService.saveSubscription(
       data.userId,
       data.subscription,
+      data.deviceId
     );
   }
 
@@ -39,8 +40,8 @@ export class NotificationsController {
   }
 
   @Delete('unsubscribe/:userId')
-  async unsubscribe(@Param() { userId }: { userId: number }) {
-    return this.notificationsService.unsubscribe(Number(userId));
+  async unsubscribe(@Param() { userId, deviceId }: { userId: number; deviceId: number }) {
+    return this.notificationsService.unsubscribe(Number(userId), Number(deviceId));
   }
 
   @Get('has-subscription/:userId')

@@ -17,10 +17,18 @@ export class NotificationsService {
 
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async saveSubscription(userId: number, subscription: any) {
+async saveSubscription(userId: number, deviceId: number, subscription: any) {
+  // Verificar si el dispositivo pertenece al usuario
+  const device = await this.prisma.device.findFirst({
+    where: { id: deviceId, user_id: userId },
+  });
+  if (!device) {
+    throw new Error('Dispositivo no encontrado o no pertenece al usuario.');
+  }
+
   // Contar las suscripciones activas del usuario
   const currentSubscriptions = await this.prisma.notificationPreference.count({
-    where: { user_id: userId, pushEnabled: true }, // Contar solo las activas
+    where: { user_id: userId, pushEnabled: true },
   });
 
   // Si ya tiene 2 suscripciones activas, lanzar un error
@@ -31,10 +39,11 @@ async saveSubscription(userId: number, subscription: any) {
   // Convertir la suscripción a string
   const subscriptionString = JSON.stringify(subscription);
 
-  // Verificar si esta suscripción ya existe
+  // Verificar si esta suscripción ya existe para este dispositivo
   const existingPreference = await this.prisma.notificationPreference.findFirst({
     where: {
       user_id: userId,
+      device_id: deviceId,
       subscription: subscriptionString,
     },
   });
@@ -57,7 +66,7 @@ async saveSubscription(userId: number, subscription: any) {
       if (updatedSubscriptions === 1) {
         notificationContent = {
           title: 'Notificaciones Activadas',
-          body: 'A partir de ahora recibirás notificaciones.',
+          body: 'A partir de ahora recibirás notificaciones en este dispositivo.',
         };
       } else if (updatedSubscriptions === 2) {
         notificationContent = {
@@ -72,6 +81,7 @@ async saveSubscription(userId: number, subscription: any) {
         await this.prisma.notification.create({
           data: {
             user_id: userId,
+            device_id: deviceId,
             title: notificationContent.title,
             message: notificationContent.body,
             isRead: false,
@@ -82,10 +92,11 @@ async saveSubscription(userId: number, subscription: any) {
     return existingPreference;
   }
 
-  // Crear una nueva suscripción
+  // Crear una nueva suscripción para este dispositivo
   const newPreference = await this.prisma.notificationPreference.create({
     data: {
       user_id: userId,
+      device_id: deviceId,
       subscription: subscriptionString,
       pushEnabled: true,
     },
@@ -100,7 +111,7 @@ async saveSubscription(userId: number, subscription: any) {
   if (updatedSubscriptions === 1) {
     notificationContent = {
       title: 'Notificaciones Activadas',
-      body: 'A partir de ahora recibirás notificaciones.',
+      body: 'A partir de ahora recibirás notificaciones en este dispositivo.',
     };
   } else if (updatedSubscriptions === 2) {
     notificationContent = {
@@ -115,6 +126,7 @@ async saveSubscription(userId: number, subscription: any) {
     await this.prisma.notification.create({
       data: {
         user_id: userId,
+        device_id: deviceId,
         title: notificationContent.title,
         message: notificationContent.body,
         isRead: false,
@@ -182,27 +194,37 @@ async countSubscriptions(userId: number) {
     };
   }
 
-  async unsubscribe(userId: number) {
-    // Iniciar una transacción para eliminar suscripciones y notificaciones
+  async unsubscribe(userId: number, deviceId: number) {
+    // Verificar si el dispositivo pertenece al usuario
+    const device = await this.prisma.device.findFirst({
+      where: { id: deviceId, user_id: userId },
+    });
+    if (!device) {
+      throw new Error('Dispositivo no encontrado o no pertenece al usuario.');
+    }
+  
+    // Eliminar las suscripciones y notificaciones asociadas al dispositivo
     const [deletedPreferences, deletedNotifications] = await this.prisma.$transaction([
       this.prisma.notificationPreference.deleteMany({
         where: {
           user_id: userId,
+          device_id: deviceId,
         },
       }),
       this.prisma.notification.deleteMany({
         where: {
           user_id: userId,
+          device_id: deviceId,
         },
       }),
     ]);
   
     // Verificar si se eliminó algo
     if (deletedPreferences.count === 0 && deletedNotifications.count === 0) {
-      return { message: 'No se encontraron suscripciones ni notificaciones para eliminar' };
+      return { message: 'No se encontraron suscripciones ni notificaciones para eliminar en este dispositivo' };
     }
   
-    return { message: 'Suscripciones y notificaciones eliminadas con éxito' };
+    return { message: 'Suscripciones y notificaciones eliminadas con éxito para este dispositivo' };
   }
 
 
