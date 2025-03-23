@@ -42,8 +42,8 @@ export class NotificationsController {
     return this.notificationsService.getNotificationsByUserId(Number(userId));
   }
 
-  @Delete('unsubscribe/:userId')
-  async unsubscribe(@Param() { userId, deviceId }: { userId: number; deviceId: number }) {
+  @Delete('unsubscribe/:userId/:deviceId')
+  async unsubscribe(@Param() { userId, deviceId }: { userId: number; deviceId: number },) {
     return this.notificationsService.unsubscribe(Number(userId), Number(deviceId));
   }
 

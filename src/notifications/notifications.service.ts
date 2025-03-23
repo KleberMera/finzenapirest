@@ -146,23 +146,7 @@ async countSubscriptions(userId: number) {
   return { subscriptions: subscriptions };
 }
 
-  // async sendTestNotification(userId: number) {
-  //   const user = await this.prisma.user.findUnique({
-  //     where: { id: userId },
-  //     include: { notificationPreferences: true }
-  //   });
 
-  //   if (user?.notificationPreferences?.subscription) {
-  //     return this.sendNotification(
-  //       JSON.parse(user.notificationPreferences.subscription),
-  //       {
-  //         title: 'Prueba de Notificación',
-  //         body: '¡Si ves esto, las notificaciones están funcionando!'
-          
-  //       }
-  //     );
-  //   }
-  // }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private async sendNotification(subscription: any, notification: { title: string; body: string }) {
