@@ -20,4 +20,19 @@ export class FirebaseController {
   async signUpWithGoogle(@Body('idToken') idToken: string) {
     return this.firebaseService.signUpWithGoogle(idToken);
   }
+
+  @Post('verify-email')
+  async requestPasswordReset(@Body('email') email: string) {
+    return this.firebaseService.requestPasswordReset(email);
+  }
+
+  @Post('reset-password')
+  async resetPassword(@Body('code') code: string, @Body('newPassword') newPassword: string) {
+    return this.firebaseService.resetPassword(code, newPassword);
+  }
+
+  @Post('verify-code')
+  async verifyCode(@Body('code') code: string) {
+    return this.firebaseService.verifyCode(code);
+  }
 }
