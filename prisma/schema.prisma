@@ -23,21 +23,21 @@ model Role {
 }
 
 model User {
-  id                      Int                     @id @default(autoincrement())
+  id                      Int                      @id @default(autoincrement())
   rol_id                  Int
-  role                    Role                    @relation(fields: [rol_id], references: [id])
+  role                    Role                     @relation(fields: [rol_id], references: [id])
   name                    String?
   last_name               String?
-  username                String?                 @unique
-  user                    String?                 @unique
-  email                   String?                 @unique
+  username                String?                  @unique
+  user                    String?                  @unique
+  email                   String?                  @unique
   password                String?
   phone                   String?
   avatar                  String?
-  firebaseUid             String?                 @unique
-  status                  Boolean                 @default(true)
-  createdAt               DateTime                @default(now())
-  updatedAt               DateTime                @updatedAt
+  firebaseUid             String?                  @unique
+  status                  Boolean                  @default(true)
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
   categories              Category[]
   debts                   Debt[]
   metas                   Meta[]
@@ -45,39 +45,42 @@ model User {
   notificationPreferences NotificationPreference[]
   devices                 Device[]
   verificationCodes       VerificationCode[]
+  salary_history          SalaryHistory[]
 }
 
 model Device {
-  id          Int      @id @default(autoincrement())
-  user_id     Int
-  user        User     @relation(fields: [user_id], references: [id])
-  os          String?
-  browser     String?
-  isMobile    Boolean  @default(false)
-  userAgent   String?
-  brand       String?
-  model       String?
-  status      String   @default("Active")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                      Int                      @id @default(autoincrement())
+  user_id                 Int
+  user                    User                     @relation(fields: [user_id], references: [id])
+  os                      String?
+  browser                 String?
+  isMobile                Boolean                  @default(false)
+  userAgent               String?
+  brand                   String?
+  model                   String?
+  status                  String                   @default("Active")
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
   notificationPreferences NotificationPreference[] // Nueva relación
-  notifications           Notification[]          // Nueva relación
+  notifications           Notification[] // Nueva relación
 }
+
 model NotificationPreference {
   id           Int      @id @default(autoincrement())
   user_id      Int
-  device_id    Int?                             // Nuevo campo
+  device_id    Int? // Nuevo campo
   user         User     @relation(fields: [user_id], references: [id])
-  device       Device?   @relation(fields: [device_id], references: [id]) // Nueva relación
+  device       Device?  @relation(fields: [device_id], references: [id]) // Nueva relación
   pushEnabled  Boolean  @default(false)
   subscription String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
+
 model Notification {
   id        Int      @id @default(autoincrement())
   user_id   Int
-  device_id Int?                              // Nuevo campo (opcional)
+  device_id Int? // Nuevo campo (opcional)
   user      User     @relation(fields: [user_id], references: [id])
   device    Device?  @relation(fields: [device_id], references: [id]) // Nueva relación (opcional)
   title     String
@@ -90,35 +93,34 @@ model Notification {
 }
 
 model VerificationCode {
-  id          Int      @id @default(autoincrement())
-  code        String   @unique // Código de verificación (ej. "X7K9P2")
-  userId      Int      // Relación con el usuario
-  user        User     @relation(fields: [userId], references: [id])
-  createdAt   DateTime @default(now())
-  expiresAt   DateTime // Fecha de expiración (ej. 15 minutos después de creado)
-  isUsed      Boolean  @default(false) // Para marcar si ya se usó
+  id        Int      @id @default(autoincrement())
+  code      String   @unique // Código de verificación (ej. "X7K9P2")
+  userId    Int // Relación con el usuario
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  expiresAt DateTime // Fecha de expiración (ej. 15 minutos después de creado)
+  isUsed    Boolean  @default(false) // Para marcar si ya se usó
 }
 
-
 model Debt {
-  id              Int            @id @default(autoincrement())
-  user_id         Int
-  user            User           @relation(fields: [user_id], references: [id])
-  name            String?
-  description     String?
-  amount          Decimal?
-  interest_rate   Decimal?
-  duration_months Int?
-  method          String?
-  start_date      String?
-  end_date        String?
-  status          String?        @default("Pendiente")
-  notifyEnabled   Boolean?        @default(false)
+  id               Int            @id @default(autoincrement())
+  user_id          Int
+  user             User           @relation(fields: [user_id], references: [id])
+  name             String?
+  description      String?
+  amount           Decimal?
+  interest_rate    Decimal?
+  duration_months  Int?
+  method           String?
+  start_date       String?
+  end_date         String?
+  status           String?        @default("Pendiente")
+  notifyEnabled    Boolean?       @default(false)
   daysBeforeNotify Int?           @default(0)
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  amortizations   Amortization[]
-  notifications   Notification[]
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  amortizations    Amortization[]
+  notifications    Notification[]
 }
 
 model Amortization {
@@ -161,31 +163,39 @@ model Transaction {
   updatedAt   DateTime @updatedAt
 }
 
-
-
-
 model Meta {
-  id             Int              @id @default(autoincrement())
-  user_id        Int
-  user           User             @relation(fields: [user_id], references: [id])
-  name           String
-  description    String?
-  target_amount  Decimal          // Monto objetivo
-  deadline       String?        // Fecha límite para alcanzar la meta
-  status         String           @default("Active") // Active, Completed, Cancelled
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
-  trackings      MetaTracking[]   // Relación con los seguimientos
+  id            Int            @id @default(autoincrement())
+  user_id       Int
+  user          User           @relation(fields: [user_id], references: [id])
+  name          String
+  description   String?
+  target_amount Decimal // Monto objetivo
+  deadline      String? // Fecha límite para alcanzar la meta
+  status        String         @default("Active") // Active, Completed, Cancelled
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  trackings     MetaTracking[] // Relación con los seguimientos
 }
 
-
 model MetaTracking {
-  id          Int      @id @default(autoincrement())
-  meta_id     Int
-  meta        Meta     @relation(fields: [meta_id], references: [id])
-  amount      Decimal  // Monto aportado en este seguimiento
-  note        String?  // Nota opcional del aporte (ej: "Primer aporte")
-  date        String  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        Int      @id @default(autoincrement())
+  meta_id   Int
+  meta      Meta     @relation(fields: [meta_id], references: [id])
+  amount    Decimal // Monto aportado en este seguimiento
+  note      String? // Nota opcional del aporte (ej: "Primer aporte")
+  date      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SalaryHistory {
+  id            Int      @id @default(autoincrement())
+  user_id       Int
+  user          User     @relation(fields: [user_id], references: [id])
+  salary_amount Decimal  // Monto del sueldo
+  effective_date DateTime // Fecha de entrada en vigor
+  month_name    String   // Nombre del mes (ej. "Enero", "Febrero")
+  description   String?  // Descripción opcional
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }

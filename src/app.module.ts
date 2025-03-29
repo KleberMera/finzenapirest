@@ -16,13 +16,14 @@ import { TicketsModule } from './ia/tickets/tickets.module';
 import { MetaModule } from './meta/meta.module';
 import { GraficModule } from './grafic/grafic.module';
 import { DeviceModule } from './device/device.module';
+import { SalaryModule } from './salary/salary.module';
 
 
 @Module({
   imports: [
     ConfigModule.forRoot(),
     ScheduleModule.forRoot(),
-    AuthModule, PrismaModule, CategoryModule, TransactionModule, DebtModule, DniModule, FirebaseModule, NotificationsModule, BalanceModule, TicketsModule, MetaModule, GraficModule, DeviceModule],
+    AuthModule, PrismaModule, CategoryModule, TransactionModule, DebtModule, DniModule, FirebaseModule, NotificationsModule, BalanceModule, TicketsModule, MetaModule, GraficModule, DeviceModule, SalaryModule],
   controllers: [AppController],
   providers: [AppService],
 })

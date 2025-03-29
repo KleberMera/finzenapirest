@@ -177,7 +177,7 @@ export class FirebaseService {
 
     // Enviar el correo con el código
     const mailOptions = {
-      from: 'tu-email@gmail.com',
+      from: 'klebermera2016@gmail.com',
       to: email,
       subject: 'Restablecimiento de contraseña',
       text: `Tu código de verificación es: ${verificationCode}. Este código expira en 15 minutos.`,
