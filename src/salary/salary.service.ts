@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { log } from 'console';
 import { Salary } from 'src/models/salary';
 import { PrismaService } from 'src/prisma/prisma.service';
 
@@ -26,6 +27,7 @@ export class SalaryService {
    * Crea un nuevo registro en la tabla SueldoHistorial con los datos proporcionados.
    */
   async createSalary(data: Salary) {
+    log(data);
     const salary = await this.prisma.salaryHistory.create({
       data,
     });

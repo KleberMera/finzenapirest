@@ -207,5 +207,37 @@ export class TransactionService {
       },
     };
   }
+
+
+  //Total de transacciones de tipo gasto por usuario de un mes en especifico
+  async getTotalExpenseByUserAndMonth(userId: number, month: number, year: number){
+    log(userId, month, year)
+    const transactions = await this.prismaService.transaction.findMany({
+      where: {
+        category: {
+          type: 'Gasto', // Filtra transacciones de tipo "Gasto"
+          user_id: userId, // Filtra por el usuario
+        },
+        date: {
+          gte: format({ date: new Date(year, month - 1, 1), format: 'YYYY-MM-DD' }), // Inicio del mes
+          lt: format({ date: new Date(year, month, 1), format: 'YYYY-MM-DD' }), // Inicio del siguiente mes
+        },
+      },
+    });
+
+    // Calcula el total
+    const total = transactions.reduce((sum, transaction) => {
+      return sum + transaction.amount.toNumber(); // Suma los montos
+    }, 0);
+
+    return {
+      data : {'total' : total},
+      message: 'Total de gasto por usuario y mes',
+      status: 200,
+
+    };
+  }
+
+
   
 }

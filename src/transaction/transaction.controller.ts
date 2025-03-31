@@ -9,6 +9,11 @@ import {
 } from '@nestjs/common';
 import { TransactionService } from './transaction.service';
 import { TransactionDTO } from 'src/models/trasaction.interface';
+interface MonthlyExpenseRequest {
+  userId: number;
+  month: number;
+  year: number;
+}
 
 @Controller('transaction')
 export class TransactionController {
@@ -62,6 +67,20 @@ export class TransactionController {
         today,
         all: all === 'true', // Convertir string a boolean
       }
+    );
+  }
+
+
+ 
+
+  @Post('user/total/month')
+  async getTotalExpenseByUserAndMonth(
+    @Body() request: MonthlyExpenseRequest
+  ) {
+    return await this.transactionService.getTotalExpenseByUserAndMonth(
+      request.userId,
+      request.month,
+      request.year
     );
   }
 }

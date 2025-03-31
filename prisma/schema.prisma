@@ -193,7 +193,7 @@ model SalaryHistory {
   user_id       Int
   user          User     @relation(fields: [user_id], references: [id])
   salary_amount Decimal  // Monto del sueldo
-  effective_date DateTime // Fecha de entrada en vigor
+  effective_date String // Fecha de entrada en vigor
   month_name    String   // Nombre del mes (ej. "Enero", "Febrero")
   description   String?  // Descripción opcional
   createdAt     DateTime @default(now())
