@@ -76,12 +76,17 @@ export class SalaryService {
   async getSalaryByMonth(userId: number, month?: string) {
     const currentMonth =
       month || new Date().toLocaleString('default', { month: 'long' });
+  
     const salary = await this.prisma.salaryHistory.findFirst({
       where: {
         user_id: userId,
         month_name: currentMonth,
       },
+      orderBy: {
+        effective_date: 'desc', // Ordenar por effective_date descendente
+      },
     });
+  
     return {
       message: 'Salary retrieved successfully',
       data: salary,

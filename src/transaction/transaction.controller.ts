@@ -83,4 +83,15 @@ export class TransactionController {
       request.year
     );
   }
+
+  @Post('user/total/income/month')
+  async getTotalIncomeByUserAndMonth(
+    @Body() request: MonthlyExpenseRequest
+  ) {
+    return await this.transactionService.getTotalIncomeByUserAndMonth(
+      request.userId,
+      request.month,
+      request.year
+    );
+  }
 }

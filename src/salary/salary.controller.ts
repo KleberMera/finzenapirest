@@ -39,11 +39,11 @@ export class SalaryController {
   }
 
   @Get('user/:userId/month')
-  async getSalaryByMonth(
-    @Param('userId') userId: string,
-    @Query('month') month?: string,
-  ) {
-    const parsedUserId = parseInt(userId, 10);
-    return this.salaryService.getSalaryByMonth(parsedUserId, month);
-  }
+async getSalaryByMonth(
+  @Param('userId') userId: string,
+  @Query('month') month?: string,
+) {
+  const parsedUserId = parseInt(userId, 10);
+  return this.salaryService.getSalaryByMonth(parsedUserId, month);
+}
 }

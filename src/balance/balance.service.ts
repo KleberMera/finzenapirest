@@ -1,3 +1,4 @@
+import { format } from '@formkit/tempo';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 
@@ -30,12 +31,12 @@ export class BalanceService {
   }
 
   private getMonthRange(month: number, year: number) {
-    const monthStart = new Date(year, month - 1, 1);
-    const monthEnd = new Date(year, month, 0);
+    const monthStart = format({ date: new Date(year, month - 1, 1), format: 'YYYY-MM-DD' });
+    const monthEnd = format({ date: new Date(year, month, 0), format: 'YYYY-MM-DD' });
     return { monthStart, monthEnd };
   }
 
-  private async getMonthData(userId: number, start: Date, end: Date) {
+  private async getMonthData(userId: number, start: string, end: string) {
     const [income, expenses] = await Promise.all([
       this.getTransactionsTotal(userId, 'Ingreso', start, end),
       this.getTransactionsTotal(userId, 'Gasto', start, end)
@@ -50,13 +51,13 @@ export class BalanceService {
   private async getTransactionsTotal(
     userId: number,
     type: string,
-    start: Date,
-    end: Date
+    start: string,
+    end: string
   ) {
     return this.prisma.transaction.aggregate({
       _sum: { amount: true },
       where: {
-        date: { gte: start.toISOString(), lte: end.toISOString() },
+        date: { gte: start, lte: end },
         category: {
           user_id: userId,
           type: type
