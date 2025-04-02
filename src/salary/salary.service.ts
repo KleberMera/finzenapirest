@@ -83,7 +83,7 @@ export class SalaryService {
         month_name: currentMonth,
       },
       orderBy: {
-        effective_date: 'desc', // Ordenar por effective_date descendente
+        createdAt: 'desc', // Ordenar por effective_date descendente
       },
     });
   
