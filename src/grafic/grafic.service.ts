@@ -1,5 +1,6 @@
 import { format } from '@formkit/tempo';
 import { Injectable } from '@nestjs/common';
+import { log } from 'console';
 
 import { PrismaService } from 'src/prisma/prisma.service';
 
@@ -83,5 +84,107 @@ export class GraficService {
     };
   }
 
-  
+
+  async getMonthlyData(userId: number, month: number, year: number) {
+    // Formato de fecha inicial y final para un mes específico
+    const startDate = format(new Date(year, month - 1, 1), 'YYYY-MM-DD');
+    const endDate = format(new Date(year, month, 0), 'YYYY-MM-DD');
+
+    // Obtener transacciones de ingresos
+    const incomes = await this.prisma.transaction.findMany({
+      where: {
+        category: {
+          user_id: userId,
+          type: 'Ingreso',
+        },
+        date: {
+          gte: startDate,
+          lte: endDate,
+        },
+      },
+      include: {
+        category: true,
+      },
+    });
+
+    // Obtener transacciones de gastos
+    const expenses = await this.prisma.transaction.findMany({
+      where: {
+        category: {
+          user_id: userId,
+          type: 'Gasto',
+        },
+        date: {
+          gte: startDate,
+          lte: endDate,
+        },
+      },
+      include: {
+        category: true,
+      },
+    });
+
+    // Calcular totales
+    const totalIncome = incomes.reduce(
+      (sum, transaction) => sum + Number(transaction.amount),
+      0,
+    );
+    const totalExpense = expenses.reduce(
+      (sum, transaction) => sum + Number(transaction.amount),
+      0,
+    );
+
+    return {
+      month: format(new Date(year, month - 1, 1), 'MMMM'),
+      year,
+      income: totalIncome,
+      expense: totalExpense,
+      balance: totalIncome - totalExpense,
+      //incomeDetails: incomes,
+      //expenseDetails: expenses,
+    };
+  }
+
+  async getDataByMonthRange(userId: number, startMonth: number, startYear: number, endMonth: number, endYear: number) {
+    // Validar que el rango sea válido
+
+    log('startMonth', startMonth);
+    log('startYear', startYear);
+    log('endMonth', endMonth);
+    log('endYear', endYear);
+    if (
+      startYear > endYear ||
+      (startYear === endYear && startMonth > endMonth)
+    ) {
+      throw new Error('Rango de fechas inválido');
+    }
+
+    const result = [];
+    let currentYear = startYear;
+    let currentMonth = startMonth;
+
+    // Iterar por cada mes en el rango
+    while (
+      currentYear < endYear ||
+      (currentYear === endYear && currentMonth <= endMonth)
+    ) {
+      const monthData = await this.getMonthlyData(
+        userId,
+        currentMonth,
+        currentYear,
+      );
+      result.push(monthData);
+
+      // Avanzar al siguiente mes
+      if (currentMonth === 12) {
+        currentMonth = 1;
+        currentYear++;
+      } else {
+        currentMonth++;
+      }
+    }
+
+    return result;
+  }
+
 }
