@@ -17,13 +17,15 @@ import { MetaModule } from './meta/meta.module';
 import { GraficModule } from './grafic/grafic.module';
 import { DeviceModule } from './device/device.module';
 import { SalaryModule } from './salary/salary.module';
+import { ReportModule } from './report/report.module';
+
 
 
 @Module({
   imports: [
     ConfigModule.forRoot(),
     ScheduleModule.forRoot(),
-    AuthModule, PrismaModule, CategoryModule, TransactionModule, DebtModule, DniModule, FirebaseModule, NotificationsModule, BalanceModule, TicketsModule, MetaModule, GraficModule, DeviceModule, SalaryModule],
+    AuthModule, PrismaModule, CategoryModule, TransactionModule, DebtModule, DniModule, FirebaseModule, NotificationsModule, BalanceModule, TicketsModule, MetaModule, GraficModule, DeviceModule, SalaryModule, ReportModule],
   controllers: [AppController],
   providers: [AppService],
 })
