@@ -1,8 +1,6 @@
 import { format } from '@formkit/tempo';
 import { Injectable } from '@nestjs/common';
-
 import generatePDFService from 'src/libs/pdf';
-
 import { TransactionReport } from 'src/models/trasaction.interface';
 import { PrinterService } from 'src/printer/printer.service';
 

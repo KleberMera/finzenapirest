@@ -2,9 +2,12 @@ import { BadRequestException, Injectable, UnauthorizedException} from '@nestjs/c
 import { JwtService } from '@nestjs/jwt';
 import * as firebaseAdmin from 'firebase-admin';
 import { PrismaService } from 'src/prisma/prisma.service';
-import * as nodemailer from 'nodemailer'; // Ejemplo con Nodemailer
+
 import * as crypto from 'crypto'; // Para generar códigos aleatorios
 import * as bcrypt from 'bcryptjs'; // Para hashear contraseñas
+import { transporterMail } from 'src/libs/mail';
+import { htmlContent } from 'src/libs/content';
+import { log } from 'console';
 
 export interface FirebaseDecodedToken {
   name: string;
@@ -95,6 +98,7 @@ export class FirebaseService {
       }
 
       const username = decodedToken.name || decodedToken.email.split('@')[0];
+      log('username', username);
       
       const newUser = await this.prismaService.user.create({
         data: {
@@ -130,28 +134,6 @@ export class FirebaseService {
   }
 
 
-  // Configuración de Nodemailer (puedes usar otro servicio)
-  private transporter = nodemailer.createTransport({
-    service: "gmail",
-    port: 465,
-    secure: true, // true for port 465, false for other ports
-    auth: {
-      user: 'klebermera2016@gmail.com',
-      pass: 'wqox hxnw gkhr mjsm',
-    },
-  });
-
-
-  // const transporter = nodemailer.createTransport({
-  //   host: "smtp.ethereal.email",
-  //   port: 587,
-  //   secure: false, // true for port 465, false for other ports
-  //   auth: {
-  //     user: "maddison53@ethereal.email",
-  //     pass: "jn7jnAPss4f63QBp6D",
-  //   },
-  // });
-  // Solicitar código de verificación
   async requestPasswordReset(email: string) {
     // Buscar al usuario por email
     const user = await this.prismaService.user.findUnique({
@@ -175,15 +157,19 @@ export class FirebaseService {
       },
     });
 
+
     // Enviar el correo con el código
     const mailOptions = {
-      from: 'klebermera2016@gmail.com',
+      //from: 'klebermera2016@gmail.com',
       to: email,
       subject: 'Restablecimiento de contraseña',
-      text: `Tu código de verificación es: ${verificationCode}. Este código expira en 15 minutos.`,
+      html: htmlContent(user.name, verificationCode),
+      //text: `Tu código de verificación es: ${verificationCode}. Este código expira en 15 minutos.`,
     };
 
-    await this.transporter.sendMail(mailOptions);
+    log('mailOptions', mailOptions);
+
+    await transporterMail.sendMail(mailOptions);
 
     return { message: 'Código de verificación enviado a tu correo' };
   }
@@ -213,8 +199,6 @@ export class FirebaseService {
       data: { isUsed: true },
     });
 
-    // Opcional: Invalidar tokens anteriores (si usas JWT)
-    // Podrías generar un nuevo access_token aquí si lo deseas
 
     return { message: 'Contraseña restablecida con éxito' };
   }
