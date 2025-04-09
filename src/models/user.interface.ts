@@ -3,7 +3,6 @@ export interface UserDTO {
   name: string;
   last_name: string;
   username: string;
-  user: string;
   email: string;
   password: string;
   phone: string;
@@ -19,7 +18,6 @@ export interface UserDTO2 {
   last_name: string;
   username: string;
   email: string;
-  user: string;
   password: string;
   status: boolean;
 }

@@ -27,10 +27,6 @@ export class AuthController {
     return this.authService.signUp(user);
   }
 
-  @Get('user')
-  getUser() {
-    return this.authService.getUser();
-  }
 
   @Get('user/:id')
   async getUserById(@Param('id') id: string) {

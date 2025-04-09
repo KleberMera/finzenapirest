@@ -82,7 +82,7 @@ export class FirebaseService {
   async signUpWithGoogle(idToken: string) {
     try {
       const decodedToken = await firebaseAdmin.auth().verifyIdToken(idToken) as FirebaseDecodedToken;
-
+  log('decodedToken', decodedToken);
       // Verificar si el usuario ya existe
       const existingUser = await this.prismaService.user.findFirst({
         where: {
@@ -103,7 +103,6 @@ export class FirebaseService {
       const newUser = await this.prismaService.user.create({
         data: {
           email: decodedToken.email,
-          user: decodedToken.email.split('@')[0],
           username: username,
           name: decodedToken.name || null,
           firebaseUid: decodedToken.uid,
