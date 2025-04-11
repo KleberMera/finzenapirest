@@ -27,7 +27,7 @@ export class TicketsService {
   // Categorías para ingresos
   private readonly incomeCategories = [
     { name: 'Salario', icon: 'pi pi-dollar', keywords: ['salario', 'sueldo', 'nómina', 'pago mensual', 'remuneración'] },
-    { name: 'Honorarios Profesionales', icon: 'pi pi-briefcase', keywords: ['honorario', 'factura', 'consultoría', 'asesoría', 'freelance', 'servicios profesionales'] },
+    { name: 'Honorarios', icon: 'pi pi-briefcase', keywords: ['honorario', 'factura', 'consultoría', 'asesoría', 'freelance', 'servicios profesionales'] },
     { name: 'Inversiones', icon: 'pi pi-chart-line', keywords: ['inversión', 'dividendo', 'interés', 'rendimiento', 'ganancia', 'acción', 'bono'] },
     { name: 'Alquileres', icon: 'pi pi-building', keywords: ['alquiler', 'arriendo', 'renta', 'propiedad'] },
     { name: 'Venta', icon: 'pi pi-shopping-bag', keywords: ['venta', 'comercio', 'negocio', 'mercadería'] },
