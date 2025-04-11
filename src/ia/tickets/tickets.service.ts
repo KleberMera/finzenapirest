@@ -12,8 +12,46 @@ export class TicketsService {
     private readonly prisma: PrismaService
   ) {}
 
+  // Categorías del SRI para gastos
+  private readonly sriExpenseCategories = [
+    { name: 'Vivienda', icon: 'pi pi-home', keywords: ['arriendo', 'alquiler', 'hipoteca', 'agua', 'luz', 'electricidad', 'gas', 'internet', 'teléfono fijo', 'condominio', 'mantenimiento hogar'] },
+    { name: 'Salud', icon: 'pi pi-heart', keywords: ['médico', 'doctor', 'hospital', 'clínica', 'farmacia', 'medicinas', 'seguro médico', 'dental', 'odontólogo', 'oftalmólogo', 'lentes', 'tratamiento'] },
+    { name: 'Educación', icon: 'pi pi-book', keywords: ['colegio', 'escuela', 'universidad', 'matrícula', 'pensión', 'útiles escolares', 'libros', 'uniformes', 'transporte escolar', 'curso', 'taller'] },
+    { name: 'Alimentación', icon: 'pi pi-shopping-cart', keywords: ['supermercado', 'mercado', 'tienda', 'comida', 'alimentos', 'restaurante', 'café', 'frutas', 'verduras', 'carne', 'lácteos'] },
+    { name: 'Vestimenta', icon: 'pi pi-tag', keywords: ['ropa', 'calzado', 'zapatos', 'zapatillas', 'pantalón', 'camisa', 'vestido', 'chaqueta', 'abrigo', 'traje', 'uniforme'] },
+    { name: 'Transporte', icon: 'pi pi-car', keywords: ['gasolina', 'taxi', 'bus', 'pasaje', 'transporte', 'combustible', 'mantenimiento vehículo', 'peaje'] },
+    { name: 'Entretenimiento', icon: 'pi pi-camera', keywords: ['cine', 'teatro', 'concierto', 'evento', 'viaje', 'turismo', 'hotel', 'vacaciones'] },
+    { name: 'Otros Gastos', icon: 'pi pi-folder', keywords: ['otro', 'varios', 'misceláneo'] }
+  ];
+
+  // Categorías para ingresos
+  private readonly incomeCategories = [
+    { name: 'Salario', icon: 'pi pi-dollar', keywords: ['salario', 'sueldo', 'nómina', 'pago mensual', 'remuneración'] },
+    { name: 'Honorarios Profesionales', icon: 'pi pi-briefcase', keywords: ['honorario', 'factura', 'consultoría', 'asesoría', 'freelance', 'servicios profesionales'] },
+    { name: 'Inversiones', icon: 'pi pi-chart-line', keywords: ['inversión', 'dividendo', 'interés', 'rendimiento', 'ganancia', 'acción', 'bono'] },
+    { name: 'Alquileres', icon: 'pi pi-building', keywords: ['alquiler', 'arriendo', 'renta', 'propiedad'] },
+    { name: 'Venta', icon: 'pi pi-shopping-bag', keywords: ['venta', 'comercio', 'negocio', 'mercadería'] },
+    { name: 'Préstamos', icon: 'pi pi-wallet', keywords: ['préstamo', 'crédito', 'financiamiento'] },
+    { name: 'Reembolsos', icon: 'pi pi-refresh', keywords: ['reembolso', 'devolución', 'retorno', 'reintegro'] },
+    { name: 'Otros Ingresos', icon: 'pi pi-money-bill', keywords: ['otro', 'varios', 'misceláneo', 'regalo', 'herencia', 'premio'] }
+  ];
+
+  // Método para obtener todas las categorías
+  private getAllCategories() {
+    return [...this.sriExpenseCategories, ...this.incomeCategories];
+  }
+
   // Método reutilizable para generar el prompt
   private getPromptTemplate(): string {
+    // Crear strings para las categorías
+    const expenseCategoriesText = this.sriExpenseCategories
+      .map(cat => `"${cat.name}" (icon: "${cat.icon}")`)
+      .join(', ');
+    
+    const incomeCategoriesText = this.incomeCategories
+      .map(cat => `"${cat.name}" (icon: "${cat.icon}")`)
+      .join(', ');
+
     return `
       Analiza la información proporcionada y extrae la siguiente información:
       1. "items": Un arreglo (array) con el detalle de cada producto o servicio encontrado.  
@@ -22,15 +60,20 @@ export class TicketsService {
             - "quantity": Cantidad comprada (por ejemplo, "2").
             - "unitPrice": Precio unitario (por ejemplo, "1.35").
       2. "amount": El monto total en dólares (por ejemplo, "30"). Si no se detecta, usa "0".
-      3. "description": Una descripción general de la compra, donde incluyas un resumen de los artículos.  
+      3. "description": Una descripción general de la compra o ingreso, donde incluyas un resumen detallado.  
          - Por ejemplo:  
             "Compra de varios artículos en Tiendas Tuti:\n- 2 Detergente en polvo (1.35 c/u)\n- 1 Harina (0.60)\n..."
-      4. "type": El tipo de transacción, que puede ser "ingreso" o "gasto". Si no se determina, asume "gasto".
-      5. "date": La fecha de la transacción en formato "YYYY-MM-DD". Si no se encuentra, utiliza la fecha actual o deja en blanco.
-      6. "time": La hora de la transacción en formato "HH:mm". Si no se encuentra, utiliza la hora actual o deja en blanco.
-      7. "categoryName": La categoría sugerida para clasificar el recibo (por ejemplo, "Supermercado", "Entretenimiento", "Mascotas/Alimentos", etc.).
-      8. "icon": El nombre de un ícono de PrimeNG que represente la categoría (por ejemplo, "pi pi-shopping-cart", "pi pi-folder", "pi pi-home").
-      9. "nameTransaction": Un título corto para identificar la transacción (por ejemplo, "Compra en Tiendas Tuti").
+            O si es un ingreso: "Pago de honorarios por servicios de consultoría para proyecto XYZ".
+      4. "type": El tipo de transacción, que debe ser "ingreso" o "gasto" basado en la naturaleza de la transacción.
+      5. "date": La fecha de la transacción en formato "YYYY-MM-DD". Si no se encuentra, utiliza la fecha actual.
+      6. "time": La hora de la transacción en formato "HH:mm". Si no se encuentra, utiliza la hora actual.
+      7. "categoryName": La categoría según el tipo de transacción:
+         - Si es un GASTO, clasifícalo en una de estas categorías del SRI:
+           ${expenseCategoriesText}
+         - Si es un INGRESO, clasifícalo en una de estas categorías específicas:
+           ${incomeCategoriesText}
+      8. "icon": El nombre del ícono de PrimeNG que corresponde a la categoría seleccionada (ya indicado arriba).
+      9. "nameTransaction": Un título corto pero descriptivo para identificar la transacción.
   
       Devuelve la información en formato JSON exactamente de la siguiente manera:
   
@@ -42,19 +85,19 @@ export class TicketsService {
             "unitPrice": "1.35"
           },
           {
-            "name": "Harina",
-            "quantity": "1",
-            "unitPrice": "0.60"
+            "name": "Leche",
+            "quantity": "3",
+            "unitPrice": "0.90"
           }
         ],
         "amount": "30",
-        "description": "Compra de varios artículos en Tiendas Tuti:\n- 2 Detergente en polvo (1.35 c/u)\n- 1 Harina (0.60)\n...",
+        "description": "Compra de víveres en Supermaxi:\n- 2 Detergente en polvo (1.35 c/u)\n- 3 Leche (0.90 c/u)\n...",
         "type": "gasto",
         "date": "2023-10-05",
         "time": "14:30",
-        "categoryName": "Mascotas/Alimentos",
-        "icon": "pi pi-folder",
-        "nameTransaction": "Compra en Tiendas Tuti"
+        "categoryName": "Alimentación",
+        "icon": "pi pi-shopping-cart",
+        "nameTransaction": "Compra de víveres en Supermaxi"
       }
     `;
   }
@@ -62,14 +105,16 @@ export class TicketsService {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   private getReceiptPrompt(imagePath: string): string {
     return `
-      Analiza la imagen del recibo proporcionada y extrae la siguiente información:
+      Analiza la imagen del recibo proporcionada y extrae la siguiente información.
+      Presta especial atención a los detalles para clasificar correctamente según el tipo de transacción (ingreso o gasto) y su categoría específica:
       ${this.getPromptTemplate()}
     `;
   }
 
   private getTextAnalysisPrompt(userText: string): string {
     return `
-      Analiza el siguiente texto de un usuario y extrae la siguiente información:
+      Analiza el siguiente texto de un usuario y extrae la siguiente información.
+      Presta especial atención para determinar si es un ingreso o un gasto y clasificarlo en la categoría correspondiente:
 
       Texto: "${userText}"
 
@@ -123,15 +168,19 @@ export class TicketsService {
       date,
       time,
       categoryName,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       icon,
       nameTransaction,
     } = parsedData;
+
+    // Validar y ajustar la categoría basándose en las categorías del sistema
+    const validatedCategory = this.validateCategory(categoryName, type);
 
     // Verificar si la categoría existe o crearla
     let category = await this.prisma.category.findFirst({
       where: {
         user_id: userId,
-        name: categoryName,
+        name: validatedCategory.name,
       },
     });
   
@@ -139,9 +188,9 @@ export class TicketsService {
       category = await this.prisma.category.create({
         data: {
           user_id: userId,
-          name: categoryName,
+          name: validatedCategory.name,
           type: type === 'ingreso' ? 'Ingreso' : 'Gasto',
-          icon,
+          icon: validatedCategory.icon,
         },
       });
     }
@@ -162,6 +211,41 @@ export class TicketsService {
     });
     
     return transaction;
+  }
+  
+  // Método para validar y estandarizar categorías
+  private validateCategory(categoryName: string, type: string): { name: string, icon: string } {
+    // Normalizar el nombre de la categoría (quitar acentos, minúsculas, etc.)
+    const normalizedCategory = categoryName.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    
+    // Seleccionar la lista de categorías según el tipo
+    const categoriesList = type === 'ingreso' ? this.incomeCategories : this.sriExpenseCategories;
+    
+    // Buscar la categoría más cercana
+    for (const category of categoriesList) {
+      // Normalizar el nombre de la categoría para la comparación
+      const categoryNormalized = category.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      
+      // Verificar si coincide exactamente
+      if (normalizedCategory === categoryNormalized) {
+        return { name: category.name, icon: category.icon };
+      }
+      
+      // Verificar si contiene palabras clave
+      for (const keyword of category.keywords) {
+        const keywordNormalized = keyword.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        if (normalizedCategory.includes(keywordNormalized)) {
+          return { name: category.name, icon: category.icon };
+        }
+      }
+    }
+    
+    // Si no se encontró coincidencia, usar la categoría por defecto según el tipo
+    if (type === 'ingreso') {
+      return { name: 'Otros Ingresos', icon: 'pi pi-money-bill' };
+    } else {
+      return { name: 'Otros Gastos', icon: 'pi pi-folder' };
+    }
   }
   
   private parseExtractedText(text: string): {
@@ -185,16 +269,23 @@ export class TicketsService {
       const l = "es"
       const t = new Date()
       const datenew = format(t, "YYYY-MM-DD", l)
-      const timenew = format(t, "h:mm", l)
+      const timenew = format(t, "h:mm:ss", l)
+      
+      // Determinar el tipo de transacción
+      const transactionType = (data.type || 'gasto').toLowerCase();
+      
+      // Validar la categoría antes de devolverla
+      const categoryInfo = this.validateCategory(data.categoryName || (transactionType === 'ingreso' ? 'Otros Ingresos' : 'Otros Gastos'), transactionType);
+      
       return {
         items: data.items || [],
         amount: data.amount || '0',
         description: data.description || 'Sin descripción',
-        type: (data.type || 'gasto').toLowerCase(),
+        type: transactionType,
         date: data.date || datenew,
         time: data.time || timenew,
-        categoryName: data.categoryName || 'Otros',
-        icon: data.icon || 'pi pi-folder',
+        categoryName: categoryInfo.name,
+        icon: categoryInfo.icon,
         nameTransaction: data.nameTransaction || 'Sin nombre',
       };
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
