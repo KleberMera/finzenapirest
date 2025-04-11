@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { BadRequestException, Injectable, UnauthorizedException} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as firebaseAdmin from 'firebase-admin';
@@ -30,7 +31,7 @@ export interface FirebaseDecodedToken {
   };
   uid: string;
 }
-
+import { customAlphabet } from 'nanoid';
 
 @Injectable()
 export class FirebaseService {
@@ -38,6 +39,8 @@ export class FirebaseService {
     private readonly prismaService: PrismaService,
     private readonly jwtService: JwtService,
   ) {}
+
+  private readonly nanoid = customAlphabet('abcdefghijklmnopqrstuvwxyz0123456789', 6);
 
   async loginWithGoogle(idToken: string) {
     try {
@@ -58,7 +61,7 @@ export class FirebaseService {
         throw new BadRequestException('Usuario no encontrado. Por favor, regístrese primero.');
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
       const { password, createdAt, updatedAt, ...userWithoutPassword } = existingUser;
       const payload = { userWithoutPassword, createdAt, updatedAt };
 
@@ -81,53 +84,76 @@ export class FirebaseService {
 
   async signUpWithGoogle(idToken: string) {
     try {
+      // 1) Verificar y decodificar el token de Firebase
       const decodedToken = await firebaseAdmin.auth().verifyIdToken(idToken) as FirebaseDecodedToken;
-  log('decodedToken', decodedToken);
-      // Verificar si el usuario ya existe
+
+      // 2) Verificar si el usuario ya existe por email o UID de Firebase
       const existingUser = await this.prismaService.user.findFirst({
         where: {
           OR: [
             { email: decodedToken.email },
-            { firebaseUid: decodedToken.uid }
-          ]
+            { firebaseUid: decodedToken.uid },
+          ],
         },
       });
-
       if (existingUser) {
         throw new BadRequestException('El usuario ya existe. Por favor, inicie sesión.');
       }
 
-      const username = decodedToken.name || decodedToken.email.split('@')[0];
-      log('username', username);
-      
+      // 3) Calcular nombre base de usuario
+      const baseUsername = decodedToken.name
+        ? decodedToken.name.trim().toLowerCase().replace(/\s+/g, '.')
+        : decodedToken.email.split('@')[0];
+
+      // 4) Asegurar unicidad del username
+      let username = baseUsername;
+      let collision = true;
+      while (collision) {
+        const userWithSameUsername = await this.prismaService.user.findUnique({
+          where: { username },
+        });
+        if (userWithSameUsername) {
+          // Añadir sufijo aleatorio
+          username = `${baseUsername}.${this.nanoid()}`;
+        } else {
+          collision = false;
+        }
+      }
+
+      // 5) Separar nombre y apellido (si hay)
+      const fullName = decodedToken.name || '';
+      const [firstName, ...rest] = fullName.trim().split(/\s+/);
+      const lastName = rest.length > 0 ? rest.join(' ') : null;
+
+      // 6) Crear el usuario en la base de datos
       const newUser = await this.prismaService.user.create({
         data: {
           email: decodedToken.email,
-          username: username,
-          name: decodedToken.name || null,
+          username,
+          name: firstName || null,
+          last_name: lastName,
           firebaseUid: decodedToken.uid,
-          avatar : decodedToken.picture || null,
+          avatar: decodedToken.picture || null,
           rol_id: 2, // Rol por defecto
-          status: true
+          status: true,
         },
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      // 7) Quitar campos sensibles y generar JWT
       const { password, createdAt, updatedAt, ...userWithoutPassword } = newUser;
-      const payload = { userWithoutPassword, createdAt, updatedAt };
-
+      const payload = { user: userWithoutPassword, createdAt, updatedAt };
       const access_token = await this.jwtService.signAsync(payload);
 
       return {
-        message: 'Usuario registrado con éxito via Google',
+        message: 'Usuario registrado con éxito vía Google',
         data: userWithoutPassword,
-        access_token: access_token,
+        access_token,
       };
     } catch (error) {
       if (error instanceof BadRequestException) {
         throw error;
       }
-      console.error('Error in signUpWithGoogle:', error);
+     // this.logger.error('Error in signUpWithGoogle:', error);
       throw new Error(`Error al registrar el usuario con Google: ${error.message}`);
     }
   }
