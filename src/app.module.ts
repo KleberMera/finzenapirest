@@ -20,6 +20,7 @@ import { SalaryModule } from './salary/salary.module';
 
 import { PrinterModule } from './printer/printer.module';
 import { ReportModule } from './report/report.module';
+import { FinanceModule } from './finance/finance.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { ReportModule } from './report/report.module';
     SalaryModule,
     ReportModule,
     PrinterModule,
+    FinanceModule,
   ],
   controllers: [AppController],
   providers: [AppService],
