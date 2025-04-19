@@ -1,72 +1,93 @@
 import { Injectable } from '@nestjs/common';
-//import { GoogleGenerativeAI } from '@google/generative-ai';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import {  GoogleAIFileManager } from '@google/generative-ai/server';
+import { GoogleGenAI } from '@google/genai';
 import * as fs from 'fs';
-import * as path from 'path';
+
 @Injectable()
 export class GenerativeAiService {
-  private genAI: GoogleGenerativeAI;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private model: any;
-  private fileManager: GoogleAIFileManager;
+  private genAI: GoogleGenAI;
+  private readonly model = 'gemini-2.0-flash';
 
   constructor() {
-    this.genAI = new GoogleGenerativeAI(process.env.API_KEY);
-    this.model = this.genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
-    this.fileManager = new GoogleAIFileManager(process.env.API_KEY);
-    
+    this.genAI = new GoogleGenAI({
+      apiKey: process.env.API_KEY,
+    });
   }
 
   async generateContent(prompt: string): Promise<string> {
-    const result = await this.model.generateContent(prompt);
-    return result.response.text();
-  }
+    const model = this.model;
+    const config = {
+      responseMimeType: 'text/plain',
+    };
 
-  async uploadToGemini(filePath: string, mimeType: string) {
-    if (!fs.existsSync(filePath)) {
-      throw new Error(`El archivo no existe en la ruta: ${filePath}`);
-    }
+    const contents = [
+      {
+        role: 'user',
+        parts: [
+          {
+            text: prompt,
+          },
+        ],
+      },
+    ];
 
-    const uploadResult = await this.fileManager.uploadFile(filePath, {
-      mimeType,
-      displayName: path.basename(filePath),
+    const response = await this.genAI.models.generateContentStream({
+      model,
+      config,
+      contents,
     });
-    const file = uploadResult.file;
-    console.log(`Uploaded file ${file.displayName} as: ${file.name}`);
-    return file;
+
+    let fullText = '';
+    for await (const chunk of response) {
+      fullText += chunk.text;
+    }
+    return fullText;
   }
 
-  async analyzeImage(filePath: string, mimeType: string, prompt: string): Promise<string> {
-    const file = await this.uploadToGemini(filePath, mimeType);
+  async analyzeImage(
+    filePath: string,
+    mimeType: string,
+    prompt: string,
+  ): Promise<string> {
+    // Read and encode file as base64
+    const fileData = fs.readFileSync(filePath);
+    const base64Data = fileData.toString('base64');
 
-
-    const generationConfig = {
+    const model = this.model;
+    const config = {
       temperature: 1,
       topP: 0.95,
       topK: 40,
       maxOutputTokens: 8192,
-      responseMimeType: "text/plain",
+      responseMimeType: 'text/plain',
     };
 
-    const chatSession = this.model.startChat({
-      generationConfig,
-      history: [
-        {
-          role: "user",
-          parts: [
-            {
-              fileData: {
-                mimeType: file.mimeType,
-                fileUri: file.uri,
-              },
+    const contents = [
+      {
+        role: 'user',
+        parts: [
+          {
+            inlineData: {
+              data: base64Data,
+              mimeType: mimeType,
             },
-          ],
-        },
-      ],
+          },
+          {
+            text: prompt,
+          },
+        ],
+      },
+    ];
+
+    const response = await this.genAI.models.generateContentStream({
+      model,
+      config,
+      contents,
     });
 
-    const result = await chatSession.sendMessage(prompt);
-    return result.response.text();
+    let fullText = '';
+    for await (const chunk of response) {
+      fullText += chunk.text;
+    }
+    return fullText;
   }
 }

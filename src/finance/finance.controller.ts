@@ -1,11 +1,11 @@
-import { Body, Controller, Get, Param } from '@nestjs/common';
+import { Body, Controller, Param, Post } from '@nestjs/common';
 import { FinanceService } from './finance.service';
 
 @Controller('finance')
 export class FinanceController {
   constructor(private readonly financeService: FinanceService) {}
 
-  @Get('summary/:userId')
+  @Post('summary/:userId')
   async getFinancialSummary(
     @Param('userId') userId: string,
     @Body('month') month: number,
@@ -19,7 +19,7 @@ export class FinanceController {
   }
 
 
-  @Get('summary/ai/:userId')
+  @Post('summary/ai/:userId')
   async getFinancialSummaryAI(
     @Param('userId') userId: string,
     @Body('month') month: number,
