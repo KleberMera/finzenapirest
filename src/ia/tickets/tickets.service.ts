@@ -66,7 +66,7 @@ export class TicketsService {
             O si es un ingreso: "Pago de honorarios por servicios de consultoría para proyecto XYZ".
       4. "type": El tipo de transacción, que debe ser "ingreso" o "gasto" basado en la naturaleza de la transacción.
       5. "date": La fecha de la transacción en formato "YYYY-MM-DD". Si no se encuentra, utiliza la fecha actual.
-      6. "time": La hora de la transacción en formato "HH:mm". Si no se encuentra, utiliza la hora actual.
+      6. "time": La hora de la transacción en formato "hh:mm:ss". Si no se encuentra, utiliza la hora actual.
       7. "categoryName": La categoría según el tipo de transacción:
          - Si es un GASTO, clasifícalo en una de estas categorías del SRI:
            ${expenseCategoriesText}
@@ -94,7 +94,7 @@ export class TicketsService {
         "description": "Compra de víveres en Supermaxi:\n- 2 Detergente en polvo (1.35 c/u)\n- 3 Leche (0.90 c/u)\n...",
         "type": "gasto",
         "date": "2023-10-05",
-        "time": "14:30",
+        "time": "14:30:05",
         "categoryName": "Alimentación",
         "icon": "pi pi-shopping-cart",
         "nameTransaction": "Compra de víveres en Supermaxi"
@@ -269,7 +269,7 @@ export class TicketsService {
       const l = "es"
       const t = new Date()
       const datenew = format(t, "YYYY-MM-DD", l)
-      const timenew = format(t, "h:mm:ss", l)
+      const timenew = format(t, "hh:mm:ss", l)
       
       // Determinar el tipo de transacción
       const transactionType = (data.type || 'gasto').toLowerCase();

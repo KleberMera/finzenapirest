@@ -40,9 +40,6 @@ export class GenerativeAiService {
   async analyzeImage(filePath: string, mimeType: string, prompt: string): Promise<string> {
     const file = await this.uploadToGemini(filePath, mimeType);
 
-    const model = this.genAI.getGenerativeModel({
-      model: "gemini-2.0-flash",
-    });
 
     const generationConfig = {
       temperature: 1,
@@ -52,7 +49,7 @@ export class GenerativeAiService {
       responseMimeType: "text/plain",
     };
 
-    const chatSession = model.startChat({
+    const chatSession = this.model.startChat({
       generationConfig,
       history: [
         {
