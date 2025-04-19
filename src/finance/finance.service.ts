@@ -117,17 +117,20 @@ export class FinanceService {
   
     // 10. Respuesta final completa
     return {
-      totalIncome: totalIncome.toFixed(2),
-      salaryAmount: salaryAmount.toFixed(2),
-      otherIncome: otherIncome.toFixed(2),
-      totalExpenses: totalExpenses.toFixed(2),
-      netBalance: (totalIncome - totalExpenses).toFixed(2),
-      expensePercentage: expensePercentage.toFixed(2),
-      daysPassedPercentage: daysPassedPercentage.toFixed(2),
-      expectedExpensesByTime: expectedExpensesByTime.toFixed(2),
-      timeAdjustedExpensePercentage: timeAdjustedExpensePercentage.toFixed(2),
-      topExpenseCategories: topCategories,
-      recommendation,
+       'message' : 'Financial summary generated successfully',
+       'data': {
+        totalIncome: totalIncome.toFixed(2),
+        salaryAmount: salaryAmount.toFixed(2),
+        otherIncome: otherIncome.toFixed(2),
+        totalExpenses: totalExpenses.toFixed(2),
+        netBalance: (totalIncome - totalExpenses).toFixed(2),
+        expensePercentage: expensePercentage.toFixed(2),
+        daysPassedPercentage: daysPassedPercentage.toFixed(2),
+        expectedExpensesByTime: expectedExpensesByTime.toFixed(2),
+        timeAdjustedExpensePercentage: timeAdjustedExpensePercentage.toFixed(2),
+        topExpenseCategories: topCategories,
+        recommendation,
+       }
     };
   }
 
