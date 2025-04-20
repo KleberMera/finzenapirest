@@ -37,10 +37,10 @@ function generatePieChartSVG(categories: CategoryTotal[], title: string): string
   }
   
   const width = 400;
-  const height = 300;
-  const radius = 100;
+  const height = 355; // Aumentado para dar más espacio a la leyenda
+  const radius = 80; // Reducido ligeramente
   const centerX = width / 2;
-  const centerY = 150;
+  const centerY = 120; // Movido hacia arriba para dar más espacio a la leyenda
   
   let startAngle = 0;
   let slices = '';
@@ -62,7 +62,7 @@ function generatePieChartSVG(categories: CategoryTotal[], title: string): string
     
     // Añadir un pequeño "desplazamiento" al segmento para resaltarlo
     const midAngle = startAngle + sliceAngle / 2;
-    const offset = 5; // desplazamiento en píxeles
+    const offset = 3; // Reducido para un aspecto más uniforme
     const offsetX = Math.cos(midAngle) * offset;
     const offsetY = Math.sin(midAngle) * offset;
     
@@ -78,16 +78,16 @@ function generatePieChartSVG(categories: CategoryTotal[], title: string): string
     // Crear el path para el segmento
     const path = `M${centerX + offsetX},${centerY + offsetY} L${x1},${y1} A${radius},${radius} 0 ${largeArcFlag},1 ${x2},${y2} Z`;
     
-    slices += `<path d="${path}" fill="${category.color}" stroke="white" stroke-width="2" filter="url(#shadow)"></path>`;
+    slices += `<path d="${path}" fill="${category.color}" stroke="white" stroke-width="1.5" filter="url(#shadow)"></path>`;
     
     // Crear la leyenda más elegante con círculos en lugar de rectángulos
-    const legendY = height - 20 - (categories.length - index) * 25;
+    // Comenzar la leyenda después del gráfico con suficiente espacio
+    const legendY = 220 + index * 22; // Comienza después del gráfico con espacio uniforme
     legend += `
       <g transform="translate(0, ${legendY})">
         <circle cx="20" cy="0" r="6" fill="${category.color}" stroke="white" stroke-width="1"></circle>
-        <text x="35" y="5" font-size="14" font-family="Helvetica">${category.name}</text>
-        <text x="350" y="5" font-size="14" font-family="Helvetica" text-anchor="end">${category.percentage.toFixed(1)}%</text>
-        <text x="350" y="22" font-size="12" font-family="Helvetica" text-anchor="end" fill="#666">$ ${category.total.toFixed(2)}</text>
+        <text x="35" y="5" font-size="12" font-family="Helvetica">${category.name}</text>
+        <text x="350" y="5" font-size="12" font-family="Helvetica" text-anchor="end">$ ${category.total.toFixed(2)} (${category.percentage.toFixed(1)}%)</text>
       </g>
     `;
     
@@ -95,22 +95,21 @@ function generatePieChartSVG(categories: CategoryTotal[], title: string): string
   });
   
   // Añadir un círculo central para un aspecto más elegante
-  const centerCircle = `<circle cx="${centerX}" cy="${centerY}" r="50" fill="white" stroke="#e5e7eb" stroke-width="1"></circle>`;
+  const centerCircle = `<circle cx="${centerX}" cy="${centerY}" r="40" fill="white" stroke="#e5e7eb" stroke-width="1"></circle>`;
   
   // Número total para mostrar en el centro
   const totalAmount = categories.reduce((sum, cat) => sum + cat.total, 0);
   const centerText = `
-    <text x="${centerX}" y="${centerY - 10}" font-size="14" text-anchor="middle" font-family="Helvetica" fill="#6b7280">Total</text>
-    <text x="${centerX}" y="${centerY + 15}" font-size="18" font-weight="bold" text-anchor="middle" font-family="Helvetica" fill="#111827">$ ${totalAmount.toFixed(2)}</text>
+    <text x="${centerX}" y="${centerY - 10}" font-size="12" text-anchor="middle" font-family="Helvetica" fill="#6b7280">Total</text>
+    <text x="${centerX}" y="${centerY + 15}" font-size="16" font-weight="bold" text-anchor="middle" font-family="Helvetica" fill="#111827">$ ${totalAmount.toFixed(2)}</text>
   `;
   
   // Ensamblar el SVG completo con título elegante
   const svg = `
-    <svg width="${width}" height="${height + 40}" xmlns="http://www.w3.org/2000/svg">
+    <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
       ${defs}
-      <rect x="0" y="0" width="${width}" height="50" fill="#f9fafb" rx="5" ry="5"></rect>
-      <text x="${width/2}" y="30" font-size="18" font-weight="bold" text-anchor="middle" font-family="Helvetica">${title}</text>
-      <line x1="50" y1="50" x2="${width-50}" y2="50" stroke="#e5e7eb" stroke-width="1"></line>
+      <text x="${width/2}" y="30" font-size="16" font-weight="bold" text-anchor="middle" font-family="Helvetica">${title}</text>
+      <line x1="50" y1="45" x2="${width-50}" y2="45" stroke="#e5e7eb" stroke-width="1"></line>
       
       <g transform="translate(0, 10)">
         ${slices}
@@ -118,7 +117,9 @@ function generatePieChartSVG(categories: CategoryTotal[], title: string): string
         ${centerText}
       </g>
       
-      <g transform="translate(10, 30)">
+
+      
+      <g transform="translate(10, 0)">
         ${legend}
       </g>
     </svg>
@@ -127,70 +128,7 @@ function generatePieChartSVG(categories: CategoryTotal[], title: string): string
   return svg;
 }
 
-// Función para generar un gráfico de barras SVG como alternativa visual
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function generateBarChartSVG(categories: CategoryTotal[], title: string, isExpense: boolean = false): string {
-  if (!categories || categories.length === 0) {
-    return `
-      <svg width="400" height="150" xmlns="http://www.w3.org/2000/svg">
-        <text x="200" y="75" font-size="16" font-weight="bold" text-anchor="middle">No hay datos disponibles para ${title}</text>
-      </svg>
-    `;
-  }
-  
-  const width = 400;
-  const height = Math.max(300, 100 + categories.length * 50); // Altura dinámica basada en número de categorías
-  
-  const barMaxWidth = 300;
-  const barHeight = 25;
-  const barGap = 25;
-  
-  // Ordenar categorías por monto (mayor a menor)
-  const sortedCategories = [...categories].sort((a, b) => b.total - a.total);
-  
-  let bars = '';
-  
-  // Encontrar el valor máximo para escalar las barras
-  const maxValue = Math.max(...sortedCategories.map(cat => cat.total));
-  
-  // Crear las barras con etiquetas
-  sortedCategories.forEach((category, index) => {
-    const y = 80 + index * barGap;
-    const barWidth = (category.total / maxValue) * barMaxWidth;
-    
-    bars += `
-      <g transform="translate(0, ${y})">
-        <text x="0" y="0" font-size="14" font-family="Helvetica" dominant-baseline="middle">${category.name}</text>
-        <rect x="90" y="-${barHeight/2}" width="${barWidth}" height="${barHeight}" rx="4" ry="4" fill="${category.color}" filter="url(#shadow)"></rect>
-        <text x="${barWidth + 100}" y="0" font-size="14" font-family="Helvetica" dominant-baseline="middle" fill="#111827">$ ${category.total.toFixed(2)}</text>
-        <text x="${barWidth + 100}" y="18" font-size="12" font-family="Helvetica" fill="#6b7280">${category.percentage.toFixed(1)}%</text>
-      </g>
-    `;
-  });
-  
-  // Definir sombras y gradientes
-  const defs = `
-    <defs>
-      <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
-        <feDropShadow dx="1" dy="1" stdDeviation="1" flood-opacity="0.3" />
-      </filter>
-    </defs>
-  `;
-  
-  // Ensamblar el SVG completo
-  const svg = `
-    <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
-      ${defs}
-      <rect x="0" y="0" width="${width}" height="50" fill="#f9fafb" rx="5" ry="5"></rect>
-      <text x="${width/2}" y="30" font-size="18" font-weight="bold" text-anchor="middle" font-family="Helvetica">${title}</text>
-      <line x1="50" y1="50" x2="${width-50}" y2="50" stroke="#e5e7eb" stroke-width="1"></line>
-      
-      ${bars}
-    </svg>
-  `;
-  
-  return svg;
-}
+
 
 export const generatePDFService = (transactions: TransactionReport[], reportDate: string): TDocumentDefinitions => {
   // Calcular totales
@@ -241,9 +179,7 @@ export const generatePDFService = (transactions: TransactionReport[], reportDate
   const gastosPieChart = generatePieChartSVG(gastosArray, 'Distribución de Gastos');
   const ingresosPieChart = generatePieChartSVG(ingresosArray, 'Distribución de Ingresos');
   
-  // Generar gráficos de barras como visualización alternativa
-  const gastosBarChart = generateBarChartSVG(gastosArray, 'Gastos por Categoría', true);
-  const ingresosBarChart = generateBarChartSVG(ingresosArray, 'Ingresos por Categoría', false);
+
 
   // Crear el cuerpo de la tabla
   const tableBody = [
@@ -423,49 +359,16 @@ export const generatePDFService = (transactions: TransactionReport[], reportDate
       margin: [0, 0, 0, 20],
     });
   }
-  
-  // Gráficos de barras (si hay espacio o en otra página)
-  if (gastosArray.length > 0 || ingresosArray.length > 0) {
-    // Añadir salto de página si hay muchas categorías
-    if ((gastosArray.length + ingresosArray.length) > 8) {
-      content.push({
-        text: '',
-        pageBreak: 'before'
-      });
-    }
-    
-    content.push({
-      text: 'Análisis Detallado',
-      style: 'sectionHeader',
-      margin: [0, 0, 0, 15],
-    });
-  }
-  
-  if (gastosArray.length > 0) {
-    content.push({
-      svg: gastosBarChart,
-      width: 400,
-      alignment: 'center',
-      margin: [0, 0, 0, 20],
-    });
-  }
-  
-  if (ingresosArray.length > 0) {
-    content.push({
-      svg: ingresosBarChart,
-      width: 400,
-      alignment: 'center',
-      margin: [0, 0, 0, 20],
-    });
-  }
+
+
   
   // Pie de página analítico
-  content.push({
-    text: 'Este reporte proporciona un análisis detallado de sus transacciones financieras. Utilice esta información para tomar decisiones financieras más informadas.',
-    style: 'footer',
-    alignment: 'center',
-    margin: [0, 30, 0, 0],
-  });
+  // content.push({
+  //   text: 'Este reporte proporciona un análisis detallado de sus transacciones financieras. Utilice esta información para tomar decisiones financieras más informadas.',
+  //   style: 'footer',
+  //   alignment: 'center',
+  //   margin: [0, 30, 0, 0],
+  // });
 
   // Definir estilos con mejor UI
   const styles = {
