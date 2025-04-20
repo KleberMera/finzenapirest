@@ -52,6 +52,12 @@ export class TicketsService {
       .map(cat => `"${cat.name}" (icon: "${cat.icon}")`)
       .join(', ');
 
+      const l = "es"
+      const t = new Date()
+      const datenew = format(t, "YYYY-MM-DD", l)
+      const timenew = format(t, "hh:mm:ss", l)
+      
+
     return `
       Analiza la información proporcionada y extrae la siguiente información:
       1. "items": Un arreglo (array) con el detalle de cada producto o servicio encontrado.  
@@ -65,8 +71,8 @@ export class TicketsService {
             "Compra de varios artículos en Tiendas Tuti:\n- 2 Detergente en polvo (1.35 c/u)\n- 1 Harina (0.60)\n..."
             O si es un ingreso: "Pago de honorarios por servicios de consultoría para proyecto XYZ".
       4. "type": El tipo de transacción, que debe ser "ingreso" o "gasto" basado en la naturaleza de la transacción.
-      5. "date": La fecha de la transacción en formato "YYYY-MM-DD". Si no se encuentra, utiliza la fecha actual.
-      6. "time": La hora de la transacción en formato "hh:mm:ss". Si no se encuentra, utiliza la hora actual.
+      5. "date": La fecha de la transacción en formato "YYYY-MM-DD". Si no se encuentra, utiliza la fecha actual que es ${datenew}.
+      6. "time": La hora de la transacción en formato "hh:mm:ss". Si no se encuentra, utiliza la hora actual que es  ${timenew}.
       7. "categoryName": La categoría según el tipo de transacción:
          - Si es un GASTO, clasifícalo en una de estas categorías del SRI:
            ${expenseCategoriesText}
