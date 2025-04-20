@@ -9,69 +9,183 @@ interface CategoryTotal {
   color: string;
 }
 
-// Colores para las categorías (puedes personalizar esta lista)
+// Paleta de colores mejorada con tonos más armoniosos
 const CHART_COLORS = [
   '#3b82f6', // blue-500
-  '#ef4444', // red-500
   '#10b981', // emerald-500
   '#f59e0b', // amber-500
   '#8b5cf6', // violet-500
-  '#ec4899', // pink-500
+  '#ef4444', // red-500
   '#06b6d4', // cyan-500
   '#f97316', // orange-500
-  '#14b8a6', // teal-500
   '#6366f1', // indigo-500
+  '#14b8a6', // teal-500
+  '#ec4899', // pink-500
+  '#84cc16', // lime-500
+  '#a855f7', // purple-500
+  '#64748b', // slate-500
 ];
 
-// Función para generar un gráfico circular SVG
+// Función para generar un gráfico circular SVG con diseño mejorado
 function generatePieChartSVG(categories: CategoryTotal[], title: string): string {
-  const size = 200;
-  const radius = 80;
-  const centerX = size / 2;
-  const centerY = size / 2;
+  if (!categories || categories.length === 0) {
+    return `
+      <svg width="400" height="150" xmlns="http://www.w3.org/2000/svg">
+        <text x="200" y="75" font-size="16" font-weight="bold" text-anchor="middle">No hay datos disponibles para ${title}</text>
+      </svg>
+    `;
+  }
+  
+  const width = 400;
+  const height = 300;
+  const radius = 100;
+  const centerX = width / 2;
+  const centerY = 150;
   
   let startAngle = 0;
   let slices = '';
   let legend = '';
   
-  // Crear los segmentos del pie
+  // Añadir sombra para efecto 3D
+  const defs = `
+    <defs>
+      <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+        <feDropShadow dx="2" dy="2" stdDeviation="2" flood-opacity="0.3" />
+      </filter>
+    </defs>
+  `;
+  
+  // Crear los segmentos del pie con efecto de separación
   categories.forEach((category, index) => {
-    const endAngle = startAngle + (category.percentage / 100) * (2 * Math.PI);
+    const sliceAngle = (category.percentage / 100) * (2 * Math.PI);
+    const endAngle = startAngle + sliceAngle;
+    
+    // Añadir un pequeño "desplazamiento" al segmento para resaltarlo
+    const midAngle = startAngle + sliceAngle / 2;
+    const offset = 5; // desplazamiento en píxeles
+    const offsetX = Math.cos(midAngle) * offset;
+    const offsetY = Math.sin(midAngle) * offset;
     
     // Calcular los puntos del arco
-    const x1 = centerX + radius * Math.cos(startAngle);
-    const y1 = centerY + radius * Math.sin(startAngle);
-    const x2 = centerX + radius * Math.cos(endAngle);
-    const y2 = centerY + radius * Math.sin(endAngle);
+    const x1 = centerX + offsetX + radius * Math.cos(startAngle);
+    const y1 = centerY + offsetY + radius * Math.sin(startAngle);
+    const x2 = centerX + offsetX + radius * Math.cos(endAngle);
+    const y2 = centerY + offsetY + radius * Math.sin(endAngle);
     
     // Determinar si el arco es mayor que 180 grados (π radianes)
-    const largeArcFlag = endAngle - startAngle > Math.PI ? 1 : 0;
+    const largeArcFlag = sliceAngle > Math.PI ? 1 : 0;
     
     // Crear el path para el segmento
-    const path = `M${centerX},${centerY} L${x1},${y1} A${radius},${radius} 0 ${largeArcFlag},1 ${x2},${y2} Z`;
+    const path = `M${centerX + offsetX},${centerY + offsetY} L${x1},${y1} A${radius},${radius} 0 ${largeArcFlag},1 ${x2},${y2} Z`;
     
-    slices += `<path d="${path}" fill="${category.color}" stroke="white" stroke-width="1"></path>`;
+    slices += `<path d="${path}" fill="${category.color}" stroke="white" stroke-width="2" filter="url(#shadow)"></path>`;
     
-    // Crear la leyenda
-    const legendY = 220 + index * 20;
+    // Crear la leyenda más elegante con círculos en lugar de rectángulos
+    const legendY = height - 20 - (categories.length - index) * 25;
     legend += `
-      <rect x="20" y="${legendY}" width="15" height="15" fill="${category.color}"></rect>
-      <text x="40" y="${legendY + 12}" font-size="12">${category.name}: ${category.percentage.toFixed(1)}% ($ ${category.total.toFixed(2)})</text>
+      <g transform="translate(0, ${legendY})">
+        <circle cx="20" cy="0" r="6" fill="${category.color}" stroke="white" stroke-width="1"></circle>
+        <text x="35" y="5" font-size="14" font-family="Helvetica">${category.name}</text>
+        <text x="350" y="5" font-size="14" font-family="Helvetica" text-anchor="end">${category.percentage.toFixed(1)}%</text>
+        <text x="350" y="22" font-size="12" font-family="Helvetica" text-anchor="end" fill="#666">$ ${category.total.toFixed(2)}</text>
+      </g>
     `;
     
     startAngle = endAngle;
   });
   
-  // Ensamblar el SVG completo
+  // Añadir un círculo central para un aspecto más elegante
+  const centerCircle = `<circle cx="${centerX}" cy="${centerY}" r="50" fill="white" stroke="#e5e7eb" stroke-width="1"></circle>`;
+  
+  // Número total para mostrar en el centro
+  const totalAmount = categories.reduce((sum, cat) => sum + cat.total, 0);
+  const centerText = `
+    <text x="${centerX}" y="${centerY - 10}" font-size="14" text-anchor="middle" font-family="Helvetica" fill="#6b7280">Total</text>
+    <text x="${centerX}" y="${centerY + 15}" font-size="18" font-weight="bold" text-anchor="middle" font-family="Helvetica" fill="#111827">$ ${totalAmount.toFixed(2)}</text>
+  `;
+  
+  // Ensamblar el SVG completo con título elegante
   const svg = `
-    <svg width="${size}" height="${size + 20 + categories.length * 20}" xmlns="http://www.w3.org/2000/svg">
-      <text x="${size/2}" y="20" font-size="16" font-weight="bold" text-anchor="middle">${title}</text>
-      <g transform="translate(0, 30)">
+    <svg width="${width}" height="${height + 40}" xmlns="http://www.w3.org/2000/svg">
+      ${defs}
+      <rect x="0" y="0" width="${width}" height="50" fill="#f9fafb" rx="5" ry="5"></rect>
+      <text x="${width/2}" y="30" font-size="18" font-weight="bold" text-anchor="middle" font-family="Helvetica">${title}</text>
+      <line x1="50" y1="50" x2="${width-50}" y2="50" stroke="#e5e7eb" stroke-width="1"></line>
+      
+      <g transform="translate(0, 10)">
         ${slices}
+        ${centerCircle}
+        ${centerText}
       </g>
-      <g transform="translate(0, 30)">
+      
+      <g transform="translate(10, 30)">
         ${legend}
       </g>
+    </svg>
+  `;
+  
+  return svg;
+}
+
+// Función para generar un gráfico de barras SVG como alternativa visual
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function generateBarChartSVG(categories: CategoryTotal[], title: string, isExpense: boolean = false): string {
+  if (!categories || categories.length === 0) {
+    return `
+      <svg width="400" height="150" xmlns="http://www.w3.org/2000/svg">
+        <text x="200" y="75" font-size="16" font-weight="bold" text-anchor="middle">No hay datos disponibles para ${title}</text>
+      </svg>
+    `;
+  }
+  
+  const width = 400;
+  const height = Math.max(300, 100 + categories.length * 50); // Altura dinámica basada en número de categorías
+  
+  const barMaxWidth = 300;
+  const barHeight = 25;
+  const barGap = 25;
+  
+  // Ordenar categorías por monto (mayor a menor)
+  const sortedCategories = [...categories].sort((a, b) => b.total - a.total);
+  
+  let bars = '';
+  
+  // Encontrar el valor máximo para escalar las barras
+  const maxValue = Math.max(...sortedCategories.map(cat => cat.total));
+  
+  // Crear las barras con etiquetas
+  sortedCategories.forEach((category, index) => {
+    const y = 80 + index * barGap;
+    const barWidth = (category.total / maxValue) * barMaxWidth;
+    
+    bars += `
+      <g transform="translate(0, ${y})">
+        <text x="0" y="0" font-size="14" font-family="Helvetica" dominant-baseline="middle">${category.name}</text>
+        <rect x="90" y="-${barHeight/2}" width="${barWidth}" height="${barHeight}" rx="4" ry="4" fill="${category.color}" filter="url(#shadow)"></rect>
+        <text x="${barWidth + 100}" y="0" font-size="14" font-family="Helvetica" dominant-baseline="middle" fill="#111827">$ ${category.total.toFixed(2)}</text>
+        <text x="${barWidth + 100}" y="18" font-size="12" font-family="Helvetica" fill="#6b7280">${category.percentage.toFixed(1)}%</text>
+      </g>
+    `;
+  });
+  
+  // Definir sombras y gradientes
+  const defs = `
+    <defs>
+      <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+        <feDropShadow dx="1" dy="1" stdDeviation="1" flood-opacity="0.3" />
+      </filter>
+    </defs>
+  `;
+  
+  // Ensamblar el SVG completo
+  const svg = `
+    <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+      ${defs}
+      <rect x="0" y="0" width="${width}" height="50" fill="#f9fafb" rx="5" ry="5"></rect>
+      <text x="${width/2}" y="30" font-size="18" font-weight="bold" text-anchor="middle" font-family="Helvetica">${title}</text>
+      <line x1="50" y1="50" x2="${width-50}" y2="50" stroke="#e5e7eb" stroke-width="1"></line>
+      
+      ${bars}
     </svg>
   `;
   
@@ -124,8 +238,12 @@ export const generatePDFService = (transactions: TransactionReport[], reportDate
   }));
   
   // Generar SVGs para los gráficos
-  const gastosSVG = generatePieChartSVG(gastosArray, 'Distribución de Gastos');
-  const ingresosSVG = generatePieChartSVG(ingresosArray, 'Distribución de Ingresos');
+  const gastosPieChart = generatePieChartSVG(gastosArray, 'Distribución de Gastos');
+  const ingresosPieChart = generatePieChartSVG(ingresosArray, 'Distribución de Ingresos');
+  
+  // Generar gráficos de barras como visualización alternativa
+  const gastosBarChart = generateBarChartSVG(gastosArray, 'Gastos por Categoría', true);
+  const ingresosBarChart = generateBarChartSVG(ingresosArray, 'Ingresos por Categoría', false);
 
   // Crear el cuerpo de la tabla
   const tableBody = [
@@ -151,6 +269,7 @@ export const generatePDFService = (transactions: TransactionReport[], reportDate
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const content: any[] = [];
 
+  // Primera página - Resumen general y tabla de transacciones
   // Encabezado con logo y título
   content.push({
     columns: [
@@ -218,50 +337,137 @@ export const generatePDFService = (transactions: TransactionReport[], reportDate
     margin: [0, 0, 0, 20],
   });
   
-  // Añadir sección de gráficos
+  // Añadir un salto de página antes de los gráficos
   content.push({
-    text: 'Análisis de Transacciones',
-    style: 'sectionHeader',
-    margin: [0, 0, 0, 10],
+    text: '',
+    pageBreak: 'before'
   });
   
-  // Mostrar gráficos lado a lado si ambos existen
-  if (gastosSVG && ingresosSVG) {
+  // Segunda página - Análisis visual con gráficos
+  // Encabezado de la sección de análisis
+  content.push({
+    stack: [
+      { text: 'Análisis Visual de Transacciones', style: 'analysisHeader' },
+      { text: `Periodo: ${reportDate}`, style: 'dateText' },
+    ],
+    margin: [0, 0, 0, 30],
+  });
+  
+  // Información resumen en diseño tipo tarjeta para la parte superior
+  content.push({
+    columns: [
+      {
+        stack: [
+          { text: 'Total Ingresos', style: 'cardTitle' },
+          { text: `$ ${totalIngresos.toFixed(2)}`, style: 'cardValue' },
+        ],
+        alignment: 'center',
+        margin: [0, 0, 5, 0],
+        background: '#f0fdf4', // green-50
+        borderRadius: 5,
+        padding: 10,
+      },
+      {
+        stack: [
+          { text: 'Total Gastos', style: 'cardTitle' },
+          { text: `$ ${totalGastos.toFixed(2)}`, style: 'cardValue' },
+        ],
+        alignment: 'center',
+        margin: [5, 0, 5, 0],
+        background: '#fef2f2', // red-50
+        borderRadius: 5,
+        padding: 10,
+      },
+      {
+        stack: [
+          { text: 'Balance', style: 'cardTitle' },
+          { 
+            text: `$ ${balance.toFixed(2)}`, 
+            style: balance >= 0 ? 'positiveCardValue' : 'negativeCardValue'
+          },
+        ],
+        alignment: 'center',
+        margin: [5, 0, 0, 0],
+        background: balance >= 0 ? '#f0fdf4' : '#fef2f2',
+        borderRadius: 5,
+        padding: 10,
+      },
+    ],
+    margin: [0, 0, 0, 30],
+  });
+  
+  // Gráficos circulares
+  if (gastosArray.length > 0 || ingresosArray.length > 0) {
     content.push({
-      columns: [
-        {
-          svg: gastosSVG,
-          width: 250,
-          margin: [0, 0, 10, 0],
-        },
-        {
-          svg: ingresosSVG,
-          width: 250,
-          margin: [10, 0, 0, 0],
-        },
-      ],
+      text: 'Distribución por Categorías',
+      style: 'sectionHeader',
+      margin: [0, 0, 0, 15],
+    });
+  }
+  
+  // Mostrar gráficos circulares 
+  if (gastosArray.length > 0) {
+    content.push({
+      svg: gastosPieChart,
+      width: 400,
+      alignment: 'center',
       margin: [0, 0, 0, 20],
     });
-  } else {
-    // Mostrar solo uno si el otro no tiene datos
-    if (gastosSVG) {
+  }
+  
+  if (ingresosArray.length > 0) {
+    content.push({
+      svg: ingresosPieChart,
+      width: 400,
+      alignment: 'center',
+      margin: [0, 0, 0, 20],
+    });
+  }
+  
+  // Gráficos de barras (si hay espacio o en otra página)
+  if (gastosArray.length > 0 || ingresosArray.length > 0) {
+    // Añadir salto de página si hay muchas categorías
+    if ((gastosArray.length + ingresosArray.length) > 8) {
       content.push({
-        svg: gastosSVG,
-        width: 300,
-        margin: [0, 0, 0, 20],
+        text: '',
+        pageBreak: 'before'
       });
     }
     
-    if (ingresosSVG) {
-      content.push({
-        svg: ingresosSVG,
-        width: 300,
-        margin: [0, 0, 0, 20],
-      });
-    }
+    content.push({
+      text: 'Análisis Detallado',
+      style: 'sectionHeader',
+      margin: [0, 0, 0, 15],
+    });
   }
+  
+  if (gastosArray.length > 0) {
+    content.push({
+      svg: gastosBarChart,
+      width: 400,
+      alignment: 'center',
+      margin: [0, 0, 0, 20],
+    });
+  }
+  
+  if (ingresosArray.length > 0) {
+    content.push({
+      svg: ingresosBarChart,
+      width: 400,
+      alignment: 'center',
+      margin: [0, 0, 0, 20],
+    });
+  }
+  
+  // Pie de página analítico
+  content.push({
+    text: 'Este reporte proporciona un análisis detallado de sus transacciones financieras. Utilice esta información para tomar decisiones financieras más informadas.',
+    style: 'footer',
+    alignment: 'center',
+    margin: [0, 30, 0, 0],
+  });
 
-  // Definir estilos inspirados en Flowbite/Tailwind
+  // Definir estilos con mejor UI
   const styles = {
     header: {
       fontSize: 18,
@@ -309,11 +515,42 @@ export const generatePDFService = (transactions: TransactionReport[], reportDate
       color: '#dc2626', // red-600
       margin: [0, 4, 0, 4],
     },
+    analysisHeader: {
+      fontSize: 22,
+      bold: true,
+      color: '#1f2937', // gray-800
+      margin: [0, 0, 0, 5],
+    },
     sectionHeader: {
       fontSize: 16,
       bold: true,
       color: '#1f2937', // gray-800
       margin: [0, 0, 0, 8],
+    },
+    cardTitle: {
+      fontSize: 14,
+      color: '#4b5563', // gray-600
+      margin: [0, 0, 0, 5],
+    },
+    cardValue: {
+      fontSize: 18,
+      bold: true,
+      color: '#111827', // gray-900
+    },
+    positiveCardValue: {
+      fontSize: 18,
+      bold: true,
+      color: '#16a34a', // green-600
+    },
+    negativeCardValue: {
+      fontSize: 18,
+      bold: true,
+      color: '#dc2626', // red-600
+    },
+    footer: {
+      fontSize: 10,
+      italic: true,
+      color: '#6b7280', // gray-500
     },
   };
 
@@ -325,6 +562,16 @@ export const generatePDFService = (transactions: TransactionReport[], reportDate
     pageMargins: [40, 40, 40, 40], // Márgenes de página tipo Tailwind (p-10)
     defaultStyle: {
       font: 'Roboto', // Opcional, si agregas la fuente Roboto
+    },
+    // Añadir número de página en el pie de página
+    footer: function(currentPage: number, pageCount: number) {
+      return {
+        text: `Página ${currentPage} de ${pageCount}`,
+        alignment: 'right',
+        margin: [0, 0, 40, 0],
+        fontSize: 8,
+        color: '#9ca3af', // gray-400
+      };
     },
   };
 
