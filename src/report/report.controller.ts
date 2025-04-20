@@ -2,6 +2,7 @@ import { Body, Controller, Post, Res } from '@nestjs/common';
 import { ReportService } from './report.service';
 import { TransactionReport } from 'src/models/trasaction.interface';
 import { Response } from 'express';
+import { log } from 'console';
 
 @Controller('report')
 export class ReportController {
@@ -14,6 +15,7 @@ export class ReportController {
     @Res() response: Response,
     @Body() data: TransactionReport[],
   ) {
+    log(data);
     const pdfDoc = await this.reportService.generatePDF(data);
     response.setHeader('Content-Type', 'application/pdf');
     pdfDoc.info.Title = 'Factura';

@@ -1,13 +1,82 @@
-
-//import pdfFonts from 'pdfmake/build/vfs_fonts';
 import { TDocumentDefinitions } from 'pdfmake/interfaces';
 import { variable64 } from './img'; // Asegúrate de que esta variable esté definida
 import { TransactionReport } from 'src/models/trasaction.interface';
 
+interface CategoryTotal {
+  name: string;
+  total: number;
+  percentage: number;
+  color: string;
+}
 
-//(pdfMake).vfs = pdfFonts.vfs;
+// Colores para las categorías (puedes personalizar esta lista)
+const CHART_COLORS = [
+  '#3b82f6', // blue-500
+  '#ef4444', // red-500
+  '#10b981', // emerald-500
+  '#f59e0b', // amber-500
+  '#8b5cf6', // violet-500
+  '#ec4899', // pink-500
+  '#06b6d4', // cyan-500
+  '#f97316', // orange-500
+  '#14b8a6', // teal-500
+  '#6366f1', // indigo-500
+];
 
-// Definimos el tipo de transacción
+// Función para generar un gráfico circular SVG
+function generatePieChartSVG(categories: CategoryTotal[], title: string): string {
+  const size = 200;
+  const radius = 80;
+  const centerX = size / 2;
+  const centerY = size / 2;
+  
+  let startAngle = 0;
+  let slices = '';
+  let legend = '';
+  
+  // Crear los segmentos del pie
+  categories.forEach((category, index) => {
+    const endAngle = startAngle + (category.percentage / 100) * (2 * Math.PI);
+    
+    // Calcular los puntos del arco
+    const x1 = centerX + radius * Math.cos(startAngle);
+    const y1 = centerY + radius * Math.sin(startAngle);
+    const x2 = centerX + radius * Math.cos(endAngle);
+    const y2 = centerY + radius * Math.sin(endAngle);
+    
+    // Determinar si el arco es mayor que 180 grados (π radianes)
+    const largeArcFlag = endAngle - startAngle > Math.PI ? 1 : 0;
+    
+    // Crear el path para el segmento
+    const path = `M${centerX},${centerY} L${x1},${y1} A${radius},${radius} 0 ${largeArcFlag},1 ${x2},${y2} Z`;
+    
+    slices += `<path d="${path}" fill="${category.color}" stroke="white" stroke-width="1"></path>`;
+    
+    // Crear la leyenda
+    const legendY = 220 + index * 20;
+    legend += `
+      <rect x="20" y="${legendY}" width="15" height="15" fill="${category.color}"></rect>
+      <text x="40" y="${legendY + 12}" font-size="12">${category.name}: ${category.percentage.toFixed(1)}% ($ ${category.total.toFixed(2)})</text>
+    `;
+    
+    startAngle = endAngle;
+  });
+  
+  // Ensamblar el SVG completo
+  const svg = `
+    <svg width="${size}" height="${size + 20 + categories.length * 20}" xmlns="http://www.w3.org/2000/svg">
+      <text x="${size/2}" y="20" font-size="16" font-weight="bold" text-anchor="middle">${title}</text>
+      <g transform="translate(0, 30)">
+        ${slices}
+      </g>
+      <g transform="translate(0, 30)">
+        ${legend}
+      </g>
+    </svg>
+  `;
+  
+  return svg;
+}
 
 export const generatePDFService = (transactions: TransactionReport[], reportDate: string): TDocumentDefinitions => {
   // Calcular totales
@@ -23,6 +92,40 @@ export const generatePDFService = (transactions: TransactionReport[], reportDate
     }
   });
   const balance = totalIngresos - totalGastos;
+
+  // Procesar datos para los gráficos
+  const gastosPorCategoria: Record<string, number> = {};
+  const ingresosPorCategoria: Record<string, number> = {};
+  
+  transactions.forEach((transaction) => {
+    const amount = parseFloat(String(transaction.amount));
+    const categoryName = transaction.category!.name;
+    
+    if (transaction.category!.type === 'Ingreso') {
+      ingresosPorCategoria[categoryName] = (ingresosPorCategoria[categoryName] || 0) + amount;
+    } else if (transaction.category!.type === 'Gasto') {
+      gastosPorCategoria[categoryName] = (gastosPorCategoria[categoryName] || 0) + amount;
+    }
+  });
+  
+  // Convertir a arrays para los gráficos
+  const gastosArray: CategoryTotal[] = Object.entries(gastosPorCategoria).map(([name, total], index) => ({
+    name,
+    total,
+    percentage: (total / totalGastos) * 100,
+    color: CHART_COLORS[index % CHART_COLORS.length]
+  }));
+  
+  const ingresosArray: CategoryTotal[] = Object.entries(ingresosPorCategoria).map(([name, total], index) => ({
+    name,
+    total,
+    percentage: (total / totalIngresos) * 100,
+    color: CHART_COLORS[index % CHART_COLORS.length]
+  }));
+  
+  // Generar SVGs para los gráficos
+  const gastosSVG = generatePieChartSVG(gastosArray, 'Distribución de Gastos');
+  const ingresosSVG = generatePieChartSVG(ingresosArray, 'Distribución de Ingresos');
 
   // Crear el cuerpo de la tabla
   const tableBody = [
@@ -114,6 +217,49 @@ export const generatePDFService = (transactions: TransactionReport[], reportDate
     ],
     margin: [0, 0, 0, 20],
   });
+  
+  // Añadir sección de gráficos
+  content.push({
+    text: 'Análisis de Transacciones',
+    style: 'sectionHeader',
+    margin: [0, 0, 0, 10],
+  });
+  
+  // Mostrar gráficos lado a lado si ambos existen
+  if (gastosSVG && ingresosSVG) {
+    content.push({
+      columns: [
+        {
+          svg: gastosSVG,
+          width: 250,
+          margin: [0, 0, 10, 0],
+        },
+        {
+          svg: ingresosSVG,
+          width: 250,
+          margin: [10, 0, 0, 0],
+        },
+      ],
+      margin: [0, 0, 0, 20],
+    });
+  } else {
+    // Mostrar solo uno si el otro no tiene datos
+    if (gastosSVG) {
+      content.push({
+        svg: gastosSVG,
+        width: 300,
+        margin: [0, 0, 0, 20],
+      });
+    }
+    
+    if (ingresosSVG) {
+      content.push({
+        svg: ingresosSVG,
+        width: 300,
+        margin: [0, 0, 0, 20],
+      });
+    }
+  }
 
   // Definir estilos inspirados en Flowbite/Tailwind
   const styles = {
@@ -163,6 +309,12 @@ export const generatePDFService = (transactions: TransactionReport[], reportDate
       color: '#dc2626', // red-600
       margin: [0, 4, 0, 4],
     },
+    sectionHeader: {
+      fontSize: 16,
+      bold: true,
+      color: '#1f2937', // gray-800
+      margin: [0, 0, 0, 8],
+    },
   };
 
   // Definir el documento
@@ -176,8 +328,7 @@ export const generatePDFService = (transactions: TransactionReport[], reportDate
     },
   };
 
- return docDefinition
-  
+ return docDefinition;
 };
 
 export default generatePDFService;
