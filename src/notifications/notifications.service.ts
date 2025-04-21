@@ -28,7 +28,9 @@ async saveSubscription(userId: number, deviceId: number, subscription: any) {
 
   // Contar las suscripciones activas del usuario
   const currentSubscriptions = await this.prisma.notificationPreference.count({
-    where: { user_id: userId, pushEnabled: true },
+    where: { device: {
+      user_id: userId
+    }, pushEnabled: true },
   });
 
   // Si ya tiene 2 suscripciones activas, lanzar un error
@@ -42,7 +44,6 @@ async saveSubscription(userId: number, deviceId: number, subscription: any) {
   // Verificar si esta suscripción ya existe para este dispositivo
   const existingPreference = await this.prisma.notificationPreference.findFirst({
     where: {
-      user_id: userId,
       device_id: deviceId,
       subscription: subscriptionString,
     },
@@ -60,7 +61,9 @@ async saveSubscription(userId: number, deviceId: number, subscription: any) {
 
       // Determinar si es la primera o segunda suscripción activa
       const updatedSubscriptions = await this.prisma.notificationPreference.count({
-        where: { user_id: userId, pushEnabled: true },
+        where: { device: {
+          user_id: userId,
+        }, pushEnabled: true },
       });
 
       if (updatedSubscriptions === 1) {
@@ -81,7 +84,6 @@ async saveSubscription(userId: number, deviceId: number, subscription: any) {
         await this.prisma.notification.create({
           data: {
             user_id: userId,
-            device_id: deviceId,
             title: notificationContent.title,
             message: notificationContent.body,
             isRead: false,
@@ -95,7 +97,6 @@ async saveSubscription(userId: number, deviceId: number, subscription: any) {
   // Crear una nueva suscripción para este dispositivo
   const newPreference = await this.prisma.notificationPreference.create({
     data: {
-      user_id: userId,
       device_id: deviceId,
       subscription: subscriptionString,
       pushEnabled: true,
@@ -103,8 +104,17 @@ async saveSubscription(userId: number, deviceId: number, subscription: any) {
   });
 
   // Contar las suscripciones activas después de crear la nueva
+  // const updatedSubscriptions = await this.prisma.notificationPreference.count({
+  //   where: { user_id: userId, pushEnabled: true },
+  // });
+
   const updatedSubscriptions = await this.prisma.notificationPreference.count({
-    where: { user_id: userId, pushEnabled: true },
+    where: {
+      device: {
+        user_id: userId,
+      },
+      pushEnabled: true,
+    },
   });
 
   // Determinar el mensaje de notificación
@@ -126,7 +136,6 @@ async saveSubscription(userId: number, deviceId: number, subscription: any) {
     await this.prisma.notification.create({
       data: {
         user_id: userId,
-        device_id: deviceId,
         title: notificationContent.title,
         message: notificationContent.body,
         isRead: false,
@@ -140,12 +149,15 @@ async saveSubscription(userId: number, deviceId: number, subscription: any) {
 
 async countSubscriptions(userId: number) {
   const subscriptions = await this.prisma.notificationPreference.count({
-    where: { user_id: userId },
+    where: {
+      device: {
+        user_id: userId,
+      },
+    },
   });
 
   return { subscriptions: subscriptions };
 }
-
 
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -191,14 +203,12 @@ async countSubscriptions(userId: number) {
     const [deletedPreferences, deletedNotifications] = await this.prisma.$transaction([
       this.prisma.notificationPreference.deleteMany({
         where: {
-          user_id: userId,
           device_id: deviceId,
         },
       }),
       this.prisma.notification.deleteMany({
         where: {
           user_id: userId,
-          device_id: deviceId,
         },
       }),
     ]);
@@ -215,7 +225,9 @@ async countSubscriptions(userId: number) {
   async hasSubscription(userId: number) {
     const count = await this.prisma.notificationPreference.count({
       where: {
-        user_id: userId,
+        device: {
+          user_id: userId,
+        },
         pushEnabled: true,
       },
     });
@@ -227,7 +239,9 @@ async countSubscriptions(userId: number) {
     // Buscar todas las suscripciones activas del usuario
     const preferences = await this.prisma.notificationPreference.findMany({
       where: {
-        user_id: userId,
+        device: {
+          user_id: userId,
+        },
         pushEnabled: true,
       },
     });

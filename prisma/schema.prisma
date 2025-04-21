@@ -40,11 +40,10 @@ model User {
   categories              Category[]
   debts                   Debt[]
   metas                   Meta[]
-  notifications           Notification[]
-  notificationPreferences NotificationPreference[]
   devices                 Device[]
   verificationCodes       VerificationCode[]
   salary_history          SalaryHistory[]
+  notifications           Notification[]
 }
 
 model Device {
@@ -61,14 +60,12 @@ model Device {
   createdAt               DateTime                 @default(now())
   updatedAt               DateTime                 @updatedAt
   notificationPreferences NotificationPreference[] // Nueva relación
-  notifications           Notification[] // Nueva relación
+
 }
 
 model NotificationPreference {
   id           Int      @id @default(autoincrement())
-  user_id      Int
   device_id    Int? // Nuevo campo
-  user         User     @relation(fields: [user_id], references: [id])
   device       Device?  @relation(fields: [device_id], references: [id]) // Nueva relación
   pushEnabled  Boolean  @default(false)
   subscription String?
@@ -79,9 +76,7 @@ model NotificationPreference {
 model Notification {
   id        Int      @id @default(autoincrement())
   user_id   Int
-  device_id Int? // Nuevo campo (opcional)
   user      User     @relation(fields: [user_id], references: [id])
-  device    Device?  @relation(fields: [device_id], references: [id]) // Nueva relación (opcional)
   title     String
   message   String
   isRead    Boolean  @default(false)

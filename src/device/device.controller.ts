@@ -61,7 +61,7 @@ export class DeviceController {
     @Param('deviceId', ParseIntPipe) deviceId: number,
     @Param('userId', ParseIntPipe) userId: number,
   ): Promise<{ hasNotifications: boolean }> {
-    const hasNotifications = await this.deviceService.hasNotifications(
+    const hasNotifications = await this.deviceService.hasNotificationPermissions(
       deviceId,
       userId,
     );

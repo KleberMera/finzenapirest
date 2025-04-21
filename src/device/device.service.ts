@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+//import { log } from 'console';
 import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
@@ -81,26 +82,28 @@ export class DeviceService {
     };
   }
   
-  async hasNotifications(deviceId: number, userId: number): Promise<boolean> {
-    // Verificar si el dispositivo existe y pertenece al usuario
+  async hasNotificationPermissions(deviceId: number, userId: number): Promise<boolean> {
+    // Paso 1: Verificar si el dispositivo existe y pertenece al usuario
     const device = await this.prisma.device.findFirst({
       where: {
         id: deviceId,
         user_id: userId,
       },
     });
-
+  
     if (!device) {
-      throw new NotFoundException('Dispositivo no encontrado o no pertenece al usuario');
+      throw new Error('El dispositivo no existe o no pertenece al usuario');
     }
-
-    // Contar las notificaciones asociadas al dispositivo
-    const notificationCount = await this.prisma.notification.count({
+  
+    // Paso 2: Verificar si hay una preferencia de notificación con pushEnabled en true
+    const preference = await this.prisma.notificationPreference.findFirst({
       where: {
         device_id: deviceId,
+        pushEnabled: true,
       },
     });
-
-    return notificationCount > 0;
+  
+    // Si existe una preferencia con pushEnabled en true, retorna true; si no, false
+    return !!preference;
   }
 }
