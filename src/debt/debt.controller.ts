@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   ParseIntPipe,
@@ -59,5 +60,12 @@ export class DebtController {
   @Get('user/amortizations/:id')
   async getDebtById(@Param('id', ParseIntPipe) id: number) {
     return await this.debtService.getDebtById(Number(id));
+  }
+
+
+  //Borrar deuda y amortizaciones por id  
+   @Delete('delete/:id')
+   async deleteDebt(@Param('id', ParseIntPipe) id: number) {
+    return await this.debtService.deleteDebt(id);
   }
 }

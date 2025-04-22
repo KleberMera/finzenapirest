@@ -317,4 +317,46 @@ export class DebtService {
       throw new Error(`Error al cargar la deuda: ${error.message}`);
     }
   }
+
+  //Borrar deuda y amortizaciones por id  
+   async deleteDebt(id: number) {
+    try {
+      const debt = await this.prismaService.debt.findUnique({
+        where: {
+          id: id,
+        },
+        include: {
+          amortizations: true,
+        },
+      });
+
+      if (!debt) {
+        throw new NotFoundException(`Seleccione una deuda`);
+      }
+
+      // Borrar amortizaciones
+      await this.prismaService.amortization.deleteMany({
+        where: {
+          debt_id: id,
+        },
+      });
+
+      // Borrar deuda
+      await this.prismaService.debt.delete({
+        where: {
+          id: id,
+        },
+      });
+
+      return {
+        message: 'Deuda borrada con éxito',
+        data: debt,
+      };
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error(`Error al borrar la deuda: ${error.message}`);
+    }
+  }
 }
