@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-misused-promises */
 import { NestFactory } from '@nestjs/core';
 import { ExpressAdapter } from '@nestjs/platform-express';
 import serverlessExpress from '@codegenie/serverless-express';
@@ -20,7 +21,6 @@ async function bootstrap() {
 
     await nestApp.init();
 
-    // eslint-disable-next-line @typescript-eslint/no-misused-promises
     cachedServer = serverlessExpress({ app: expressApp });
   }
 
