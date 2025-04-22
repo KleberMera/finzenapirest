@@ -1,0 +1,55 @@
+service: finzenapirest
+
+frameworkVersion: '4'
+
+provider:
+  name: aws
+  runtime: nodejs22.x
+  region: us-west-2
+  architecture: arm64 # Cambia según tu preferencia
+  # stage: ${opt:stage, 'dev'}
+  stage: production
+  memorySize: 3008 # Tamaño de memoria en MB (máximo permitido)
+  logRetentionInDays: 1 # Retención de logs en días
+  timeout: 15
+
+functions:
+  api:
+    handler: dist/lambda.handler
+    events:
+      - httpApi:
+          path: '/{proxy+}'
+          method: any
+          # cors: true
+
+plugins:
+  - serverless-offline
+
+package:
+  individually: true
+  excludeDevDependencies: true
+  patterns:
+    - '!**/*'
+    - 'dist/**/*.js'
+    - '!dist/**/*.test.js'
+    - '!dist/**/*.spec.js'
+    - '!dist/**/__tests__/**'
+    - '!node_modules/**'
+    - 'node_modules/@nestjs/core/**/*.js'
+    - 'node_modules/@nestjs/common/**/*.js'
+    - 'node_modules/@prisma/client/**/*.js'
+    - 'node_modules/.prisma/client/**/*.js'
+    - 'package.json'
+    - '!**/*.ts'
+    - '!**/tsconfig.json'
+    - '!**/tsconfig.*.json'
+    - '!**/.npmignore'
+    - '!**/README.md'
+    - '!**/.git*'
+    - '!**/*.map'
+    - '!**/.DS_Store'
+    - '!node_modules/.bin/**'
+    - '!node_modules/**/test/**'
+    - '!node_modules/**/tests/**'
+    - '!node_modules/**/*.md'
+    - '!node_modules/**/*.d.ts'
