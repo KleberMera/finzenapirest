@@ -137,9 +137,9 @@ export const generatePDFService = (transactions: TransactionReport[], reportDate
 
   transactions.forEach((transaction) => {
     const amount = parseFloat(String(transaction.amount));
-    if (transaction.category!.type === 'Ingreso') {
+    if (transaction.category.type === 'Ingreso') {
       totalIngresos += amount;
-    } else if (transaction.category!.type === 'Gasto') {
+    } else if (transaction.category.type === 'Gasto') {
       totalGastos += amount;
     }
   });
@@ -151,11 +151,11 @@ export const generatePDFService = (transactions: TransactionReport[], reportDate
   
   transactions.forEach((transaction) => {
     const amount = parseFloat(String(transaction.amount));
-    const categoryName = transaction.category!.name;
+    const categoryName = transaction.category.name;
     
-    if (transaction.category!.type === 'Ingreso') {
+    if (transaction.category.type === 'Ingreso') {
       ingresosPorCategoria[categoryName] = (ingresosPorCategoria[categoryName] || 0) + amount;
-    } else if (transaction.category!.type === 'Gasto') {
+    } else if (transaction.category.type === 'Gasto') {
       gastosPorCategoria[categoryName] = (gastosPorCategoria[categoryName] || 0) + amount;
     }
   });
@@ -193,8 +193,8 @@ export const generatePDFService = (transactions: TransactionReport[], reportDate
     ],
     ...transactions.map((transaction) => [
       transaction.name,
-      transaction.category!.name,
-      transaction.category!.type,
+      transaction.category.name,
+      transaction.category.type,
       transaction.date,
       transaction.time,
       `$ ${parseFloat(String(transaction.amount)).toFixed(2)}`,
@@ -202,7 +202,7 @@ export const generatePDFService = (transactions: TransactionReport[], reportDate
   ];
 
   // Definir el contenido del PDF
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const content: any[] = [];
 
   // Primera página - Resumen general y tabla de transacciones
@@ -458,7 +458,7 @@ export const generatePDFService = (transactions: TransactionReport[], reportDate
   };
 
   // Definir el documento
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const docDefinition: any = {
     content,
     styles,

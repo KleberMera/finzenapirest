@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call */
 import { Injectable } from '@nestjs/common';
 import { GenerativeAiService } from '../google/generative-ai/generative-ai.service';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -165,7 +166,7 @@ export class TicketsService {
     };
   }
   
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   private async saveTransaction(userId: number, parsedData: any) {
     const {
       amount,

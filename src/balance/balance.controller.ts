@@ -30,6 +30,7 @@ export class BalanceController {
       };
     } catch (error) {
       throw new HttpException({
+         
         message: error.message || 'Error al obtener el balance',
         data: null,
         status: HttpStatus.INTERNAL_SERVER_ERROR

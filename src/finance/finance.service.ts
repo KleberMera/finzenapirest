@@ -99,7 +99,9 @@ export class FinanceService {
       .slice(0, 3)
       .map(([category, amount]) => ({
         category,
+        // eslint-disable-next-line @typescript-eslint/no-base-to-string
         amount: parseFloat(amount.toString()).toFixed(2),
+        // eslint-disable-next-line @typescript-eslint/no-base-to-string
         percentage: ((parseFloat(amount.toString()) / totalExpenses) * 100).toFixed(2)
       }));
   

@@ -14,7 +14,7 @@ export class NotificationsController {
  
     @Param() { userId, deviceId }: { userId: number; deviceId: number },
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     @Body() data: {  subscription: any }
   ) {
     return this.notificationsService.saveSubscription(

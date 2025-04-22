@@ -31,6 +31,7 @@ export class TicketsController {
   @Post('process-receipt/:userId')
   @UseInterceptors(FileInterceptor('file')) // Asegúrate de que el nombre coincida con el campo en Insomnia
   async processReceipt(
+     
     @UploadedFile() file: Express.Multer.File, // Asegúrate de usar el tipo correcto
     @Param('userId') userId: string,
   ) {

@@ -8,6 +8,7 @@ export class NotificationsService {
  // private readonly logger = new Logger(NotificationsService.name);
 
   constructor(private prisma: PrismaService) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     webpush.setVapidDetails(
       'mailto:klebermera2024@gmail.com', // tu correo
       'BB9RG9no5eZuqpw0mqNNTRdo1gzSQJAhVKsI2X8SDuUHnHAKcO8co6UWPkZwykP7OINeSSV3IiN_hjVj_kwhaLM',
@@ -16,7 +17,7 @@ export class NotificationsService {
   }
 
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 async saveSubscription(userId: number, deviceId: number, subscription: any) {
   // Verificar si el dispositivo pertenece al usuario
   const device = await this.prisma.device.findFirst({
@@ -160,9 +161,10 @@ async countSubscriptions(userId: number) {
 }
 
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   private async sendNotification(subscription: any, notification: { title: string; body: string }) {
     try {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       await webpush.sendNotification(
         subscription,
         JSON.stringify({
@@ -250,6 +252,7 @@ async countSubscriptions(userId: number) {
     for (const pref of preferences) {
       try {
         const subscription = JSON.parse(pref.subscription);
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call
         await webpush.sendNotification(
           subscription,
           JSON.stringify({

@@ -7,6 +7,7 @@ export class DniController {
 
   @Get('person/:cedula')
   async getPersonData(@Param('cedula') cedula: string) {
+     
     return this.dniService.getPersonData(cedula);
   }
 }

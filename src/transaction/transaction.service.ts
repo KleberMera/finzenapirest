@@ -113,7 +113,7 @@ export class TransactionService {
     const take = all ? undefined : Number(limit);
   
     // Preparar el objeto where para los filtros
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const  where: any = {
       category: {
         user_id: userId,
@@ -171,7 +171,7 @@ export class TransactionService {
     const total = await this.prismaService.transaction.count({ where });
   
     // Preparar opciones de consulta
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const findManyOptions: any = {
       where,
       include: {
