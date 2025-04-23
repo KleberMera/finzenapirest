@@ -6,10 +6,9 @@ provider:
   name: aws
   runtime: nodejs22.x
   region: us-west-2
-  architecture: arm64 # Cambia según tu preferencia
   # stage: ${opt:stage, 'dev'}
   stage: production
-  memorySize: 3008 # Tamaño de memoria en MB (máximo permitido)
+  memorySize: 2048 # Tamaño de memoria en MB (máximo permitido)
   logRetentionInDays: 1 # Retención de logs en días
   timeout: 15
   environment:
@@ -44,9 +43,10 @@ functions:
 package:
   patterns:
     - '!node_modules/.prisma/client/libquery_engine-*'
-    - 'node_modules/.prisma/client/libquery_engine-linux-arm64-*'
+    - 'node_modules/.prisma/client/libquery_engine-rhel-*'
     - '!node_modules/prisma/libquery_engine-*'
     - '!node_modules/@prisma/engines/**'
+    - '!node_modules/.cache/prisma/**'  # only required for Windows
 
 plugins:
   - serverless-jetpack

@@ -5,7 +5,8 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
@@ -23,27 +24,27 @@ model Role {
 }
 
 model User {
-  id                      Int                      @id @default(autoincrement())
-  rol_id                  Int
-  role                    Role                     @relation(fields: [rol_id], references: [id])
-  name                    String?
-  last_name               String?
-  username                String?                  @unique
-  email                   String?                  @unique
-  password                String?
-  phone                   String?
-  avatar                  String?
-  firebaseUid             String?                  @unique
-  status                  Boolean                  @default(true)
-  createdAt               DateTime                 @default(now())
-  updatedAt               DateTime                 @updatedAt
-  categories              Category[]
-  debts                   Debt[]
-  metas                   Meta[]
-  devices                 Device[]
-  verificationCodes       VerificationCode[]
-  salary_history          SalaryHistory[]
-  notifications           Notification[]
+  id                Int                @id @default(autoincrement())
+  rol_id            Int
+  role              Role               @relation(fields: [rol_id], references: [id])
+  name              String?
+  last_name         String?
+  username          String?            @unique
+  email             String?            @unique
+  password          String?
+  phone             String?
+  avatar            String?
+  firebaseUid       String?            @unique
+  status            Boolean            @default(true)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  categories        Category[]
+  debts             Debt[]
+  metas             Meta[]
+  devices           Device[]
+  verificationCodes VerificationCode[]
+  salary_history    SalaryHistory[]
+  notifications     Notification[]
 }
 
 model Device {
@@ -60,7 +61,6 @@ model Device {
   createdAt               DateTime                 @default(now())
   updatedAt               DateTime                 @updatedAt
   notificationPreferences NotificationPreference[] // Nueva relación
-
 }
 
 model NotificationPreference {
@@ -183,13 +183,13 @@ model MetaTracking {
 }
 
 model SalaryHistory {
-  id            Int      @id @default(autoincrement())
-  user_id       Int
-  user          User     @relation(fields: [user_id], references: [id])
-  salary_amount Decimal  // Monto del sueldo
+  id             Int      @id @default(autoincrement())
+  user_id        Int
+  user           User     @relation(fields: [user_id], references: [id])
+  salary_amount  Decimal // Monto del sueldo
   effective_date String // Fecha de entrada en vigor
-  month_name    String   // Nombre del mes (ej. "Enero", "Febrero")
-  description   String?  // Descripción opcional
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  month_name     String // Nombre del mes (ej. "Enero", "Febrero")
+  description    String? // Descripción opcional
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
