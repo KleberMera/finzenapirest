@@ -5,6 +5,7 @@ import * as fs from 'fs';
 @Injectable()
 export class GenerativeAiService {
   private genAI: GoogleGenAI;
+  //private readonly model = 'gemini-2.5-flash-preview-04-17';
   private readonly model = 'gemini-2.0-flash';
 
   constructor() {
@@ -14,8 +15,11 @@ export class GenerativeAiService {
   }
 
   async generateContent(prompt: string): Promise<string> {
-   // const model = this.model;
+    // const model = this.model;
     const config = {
+      // thinkingConfig: {
+      //   thinkingBudget: 0,
+      // },
       responseMimeType: 'text/plain',
     };
 
@@ -31,7 +35,7 @@ export class GenerativeAiService {
     ];
 
     const response = await this.genAI.models.generateContentStream({
-      model : this.model,
+      model: this.model,
       config,
       contents,
     });
@@ -52,7 +56,7 @@ export class GenerativeAiService {
     const fileData = fs.readFileSync(filePath);
     const base64Data = fileData.toString('base64');
 
-   // const model = this.model;
+    // const model = this.model;
     const config = {
       temperature: 1,
       topP: 0.95,
@@ -79,7 +83,7 @@ export class GenerativeAiService {
     ];
 
     const response = await this.genAI.models.generateContentStream({
-      model : this.model,
+      model: this.model,
       config,
       contents,
     });

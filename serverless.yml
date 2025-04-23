@@ -17,11 +17,18 @@ functions:
   api:
     handler: dist/lambda.handler
     events:
-      - httpApi:
-          path: '/{proxy+}'
-          method: any
-          # cors: true
+      - http:
+          method: ANY
+          path: /
+      - http:
+          method: ANY
+          path: '{proxy+}'
 
 plugins:
   - serverless-offline
 
+
+package:
+  exclude:
+    - node_modules/**/*.test.js
+    - src/**/*.ts
