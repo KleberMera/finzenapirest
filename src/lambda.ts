@@ -18,6 +18,7 @@ async function bootstrap() {
     );
 
     nestApp.enableCors();
+    nestApp.setGlobalPrefix('api');
 
     await nestApp.init();
 

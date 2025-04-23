@@ -25,10 +25,5 @@ functions:
           path: '{proxy+}'
 
 plugins:
+  - serverless-jetpack
   - serverless-offline
-
-
-package:
-  exclude:
-    - node_modules/**/*.test.js
-    - src/**/*.ts
