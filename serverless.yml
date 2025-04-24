@@ -4,8 +4,8 @@ frameworkVersion: '4'
 
 provider:
   name: aws
-  runtime: nodejs22.x
-  region: us-west-2
+  runtime: nodejs20.x
+  region: us-west-1
   # stage: ${opt:stage, 'dev'}
   stage: production
   memorySize: 2048 # Tamaño de memoria en MB (máximo permitido)
@@ -40,13 +40,6 @@ functions:
           method: ANY
           path: '{proxy+}'
 
-package:
-  patterns:
-    - '!node_modules/.prisma/client/libquery_engine-*'
-    - 'node_modules/.prisma/client/libquery_engine-rhel-*'
-    - '!node_modules/prisma/libquery_engine-*'
-    - '!node_modules/@prisma/engines/**'
-    - '!node_modules/.cache/prisma/**'  # only required for Windows
 
 plugins:
   - serverless-jetpack
