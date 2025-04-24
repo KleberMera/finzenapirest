@@ -40,7 +40,13 @@ functions:
           method: ANY
           path: '{proxy+}'
 
-
+custom:
+  jetpack:
+    includes:
+      - node_modules/.prisma/**  # Incluir explícitamente el directorio .prisma
+      - node_modules/@prisma/client/**
+      - prisma/
+      
 plugins:
   - serverless-jetpack
   - serverless-offline

@@ -1,10 +1,11 @@
 import { format } from '@formkit/tempo';
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+import { PrismaService } from 'src/prisma/prisma.service';
+
 
 @Injectable()
 export class BalanceService {
-  private prisma = new PrismaClient();
+  constructor(private readonly prisma: PrismaService) {}
 
   async getMonthlyBalance(userId: number, currentMonth: number, currentYear: number, previousMonth: number, previousYear: number) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });

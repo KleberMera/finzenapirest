@@ -10,6 +10,8 @@
   "license": "UNLICENSED",
   "scripts": {
     "build": "nest build",
+    "predeploy": "prisma generate && cp -r node_modules/.prisma dist/.prisma && cp -r node_modules/@prisma/client dist/@prisma/client",
+    "deploy": "npm run predeploy && serverless deploy",
     "postinstall": "prisma generate && prisma migrate dev",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "node --max-old-space-size=4096 node_modules/.bin/nest start",
