@@ -1,4 +1,5 @@
-import { Decimal } from '@prisma/client/runtime/library';
+
+import { Decimal } from 'generated/prisma/runtime/library';
 import { AmortizationDTO } from './amortization.interface';
 import {
   IsArray,

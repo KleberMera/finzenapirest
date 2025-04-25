@@ -11,27 +11,10 @@ provider:
   memorySize: 2048 # Tamaño de memoria en MB (máximo permitido)
   logRetentionInDays: 1 # Retención de logs en días
   timeout: 15
-  environment:
-    DATABASE_URL: ${env:DATABASE_URL} # URL de conexión a la base de datos
-    API_KEY: ${env:API_KEY} # Clave de autenticación
-    FIREBASE_AUTH_PROVIDER_X509_CERT_URL: ${env:FIREBASE_AUTH_PROVIDER_X509_CERT_URL}
-    FIREBASE_AUTH_URI: ${env:FIREBASE_AUTH_URI}
-    FIREBASE_CLIENT_EMAIL: ${env:FIREBASE_CLIENT_EMAIL}
-    FIREBASE_CLIENT_ID: ${env:FIREBASE_CLIENT_ID}
-    FIREBASE_CLIENT_X509_CERT_URL: ${env:FIREBASE_CLIENT_X509_CERT_URL}
-    FIREBASE_PRIVATE_KEY: ${env:FIREBASE_PRIVATE_KEY}
-    FIREBASE_PRIVATE_KEY_ID: ${env:FIREBASE_PRIVATE_KEY_ID}
-    FIREBASE_PROJECT_ID: ${env:FIREBASE_PROJECT_ID}
-    FIREBASE_TOKEN_URI: ${env:FIREBASE_TOKEN_URI}
-    FIREBASE_TYPE: ${env:FIREBASE_TYPE}
-    FIREBASE_UNIVERSE_DOMAIN: ${env:FIREBASE_UNIVERSE_DOMAIN}
-    JWT_SECRET: ${env:JWT_SECRET} # Secreto para firmar JWT
-
-
 
 functions:
   api:
-    handler: dist/src/lambda.handler
+    handler: dist/lambda.handler
     events:
       - http:
           method: ANY
@@ -39,13 +22,6 @@ functions:
       - http:
           method: ANY
           path: '{proxy+}'
-
-custom:
-  jetpack:
-    includes:
-      - node_modules/.prisma/**  # Incluir explícitamente el directorio .prisma
-      - node_modules/@prisma/client/**
-      - prisma/
       
 plugins:
   - serverless-jetpack

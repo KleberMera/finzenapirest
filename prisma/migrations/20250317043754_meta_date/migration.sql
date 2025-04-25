@@ -1,6 +1,0 @@
--- AlterTable
-ALTER TABLE "Meta" ALTER COLUMN "deadline" SET DATA TYPE TEXT;
-
--- AlterTable
-ALTER TABLE "MetaTracking" ALTER COLUMN "date" DROP DEFAULT,
-ALTER COLUMN "date" SET DATA TYPE TEXT;
