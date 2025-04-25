@@ -31,12 +31,16 @@ export class CategoryService {
     try {
       const existingCategory = await this.prismaService.category.findFirst({
         where: {
-          AND: [{ name: category.name }, { user_id: category.user_id }],
+          AND: [
+            { name: { equals: category.name, mode: 'insensitive' } },
+            { user_id: category.user_id }
+          ],
         },
       });
 
-      if (existingCategory)
+      if (existingCategory) {
         throw new BadRequestException('Ya tienes una categoría con este nombre');
+      }
 
       const newCategory = await this.prismaService.category.create({
         data: {
