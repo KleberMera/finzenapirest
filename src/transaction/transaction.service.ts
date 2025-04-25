@@ -47,7 +47,9 @@ export class TransactionService {
   async createTransaction(transaction: TransactionDTO) {
     try {
       const newTransaction = await this.prismaService.transaction.create({
-        data: transaction,
+        data: {
+          ...transaction,
+        }
       });
       return {
         message: 'Transacción creada con éxito',
