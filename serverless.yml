@@ -6,11 +6,11 @@ provider:
   name: aws
   runtime: nodejs20.x
   region: us-west-1
-  # stage: ${opt:stage, 'dev'}
   stage: production
-  memorySize: 2048 # Tamaño de memoria en MB (máximo permitido)
-  logRetentionInDays: 1 # Retención de logs en días
+  memorySize: 2048
+  logRetentionInDays: 1
   timeout: 15
+
 
 functions:
   api:
@@ -22,6 +22,13 @@ functions:
       - http:
           method: ANY
           path: '{proxy+}'
+    package:
+      individually: true
+      include:
+        - 'generated/**'
+        - '!generated.zip'
+
+
       
 plugins:
   - serverless-jetpack

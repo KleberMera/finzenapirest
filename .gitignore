@@ -4,6 +4,8 @@
 /build
 # Prisma
 /generated
+/generated.zip
+/aws
 
 # Logs
 logs
