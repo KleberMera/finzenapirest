@@ -40,7 +40,7 @@ export class TicketsController {
     const s3Key = await this.s3Service.uploadFile(file, parseInt(userId));
     
     // Obtener URL firmada para acceder al archivo
-    const fileUrl = await this.s3Service.getSignedUrl(s3Key);
+    const fileUrl =  this.s3Service.getPublicUrl(s3Key);
 
     console.log('Archivo subido a S3:', s3Key);
     console.log('URL de acceso temporal:', fileUrl);

@@ -25,6 +25,7 @@ export class S3Service {
     }
 
 
+
     private async ensureUserFolderExists(userId: number): Promise<void> {
       const folderPrefix = `user_${userId}/`;
       
@@ -110,4 +111,12 @@ export class S3Service {
       // URL firmada válida por 1 hora
       return getSignedUrl(this.s3Client, command, { expiresIn: 3600 });
     }
+
+
+           // Obtener URL pública directa del bucket S3
+       getPublicUrl(key: string): string {
+        // Construir URL directa al recurso
+        return `https://${this.bucket}.s3.${process.env.NEST_AWS_REGION}.amazonaws.com/${key}`;
+      }
+
 }
