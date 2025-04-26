@@ -8,16 +8,14 @@ import {
 } from '@nestjs/common';
 import { TicketsService } from './tickets.service';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { S3Service } from 'src/s3/s3.service';
+
 
 @Controller('tickets')
 export class TicketsController {
-  constructor(private readonly ticketsService: TicketsService) {}
-
-  // @Get('explain-ai')
-  // async explainAI(): Promise<string> {
-  //   return this.ticketsService.explainAI();
-  // }
-
+  constructor(private readonly ticketsService: TicketsService,
+    private readonly s3Service: S3Service
+  ) {}
   // En tu controlador, podrías hacer:
   @Post('process-text/:userId')
   async processText(
@@ -31,25 +29,30 @@ export class TicketsController {
   @Post('process-receipt/:userId')
   @UseInterceptors(FileInterceptor('file')) // Asegúrate de que el nombre coincida con el campo en Insomnia
   async processReceipt(
-     
-    @UploadedFile() file: Express.Multer.File, // Asegúrate de usar el tipo correcto
+    @UploadedFile() file: Express.Multer.File,
     @Param('userId') userId: string,
   ) {
     if (!file) {
       throw new Error('No se ha subido ningún archivo');
     }
 
-    const filePath = file.path; // Ruta temporal del archivo
-    const mimeType = file.mimetype; // Tipo MIME del archivo (por ejemplo, image/jpeg)
+    // Subir el archivo directamente a S3
+    const s3Key = await this.s3Service.uploadFile(file, parseInt(userId));
+    
+    // Obtener URL firmada para acceder al archivo
+    const fileUrl = await this.s3Service.getSignedUrl(s3Key);
 
-    console.log('Archivo subido:', file); // Verifica que el archivo no sea undefined
-    console.log('Ruta del archivo:', filePath); // Verifica que la ruta no sea undefined
+    console.log('Archivo subido a S3:', s3Key);
+    console.log('URL de acceso temporal:', fileUrl);
 
+    // Procesar el recibo con la URL en lugar de la ruta local
     const transaction = await this.ticketsService.processReceipt(
       parseInt(userId),
-      filePath,
-      mimeType,
+      fileUrl,
+      file.mimetype,
+      s3Key,
     );
+    
     return { message: 'Transacción procesada con éxito', transaction };
   }
 }

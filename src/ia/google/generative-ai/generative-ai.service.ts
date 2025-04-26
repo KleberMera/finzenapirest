@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { GoogleGenAI } from '@google/genai';
 import * as fs from 'fs';
-
+import axios from 'axios';
 @Injectable()
 export class GenerativeAiService {
   private genAI: GoogleGenAI;
@@ -46,17 +46,12 @@ export class GenerativeAiService {
     }
     return fullText;
   }
-
-  async analyzeImage(
-    filePath: string,
+  
+  async analyzeImageBase(
+    base64Data: string,
     mimeType: string,
     prompt: string,
   ): Promise<string> {
-    // Read and encode file as base64
-    const fileData = fs.readFileSync(filePath);
-    const base64Data = fileData.toString('base64');
-
-    // const model = this.model;
     const config = {
       temperature: 1,
       topP: 0.95,
@@ -93,5 +88,40 @@ export class GenerativeAiService {
       fullText += chunk.text;
     }
     return fullText;
+  }
+
+  // El método original ahora llama al método base
+  async analyzeImage(
+    filePath: string,
+    mimeType: string,
+    prompt: string,
+  ): Promise<string> {
+    // Read and encode file as base64
+    const fileData = fs.readFileSync(filePath);
+    const base64Data = fileData.toString('base64');
+    
+    return this.analyzeImageBase(base64Data, mimeType, prompt);
+  }
+
+  // Nuevo método para analizar imágenes desde URL (S3)
+  async analyzeImageFromUrl(
+    imageUrl: string, 
+    mimeType: string, 
+    prompt: string
+  ): Promise<string> {
+    try {
+      // Descargar la imagen desde la URL de S3 a un buffer en memoria
+      const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+      const imageBuffer = Buffer.from(response.data, 'binary');
+      
+      // Convertir a base64
+      const base64Data = imageBuffer.toString('base64');
+      
+      // Usar el método base para analizar la imagen
+      return this.analyzeImageBase(base64Data, mimeType, prompt);
+    } catch (error) {
+      console.error('Error al procesar la imagen desde URL:', error);
+      throw new Error(`Error al procesar la imagen desde URL: ${error.message}`);
+    }
   }
 }

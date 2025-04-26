@@ -155,6 +155,7 @@ model Transaction {
   amount      Decimal
   date        String
   time        String?
+  receiptImageS3Key String? // Clave del objeto en S3 para el recibo
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }

@@ -22,6 +22,7 @@ import { PrinterModule } from './printer/printer.module';
 import { ReportModule } from './report/report.module';
 import { FinanceModule } from './finance/finance.module';
 import { FcmNotificationModule } from './fcm-notification/fcm-notification.module';
+import { S3Module } from './s3/s3.module';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { FcmNotificationModule } from './fcm-notification/fcm-notification.modul
     PrinterModule,
     FinanceModule,
     FcmNotificationModule,
+    S3Module,
   ],
   controllers: [AppController],
   providers: [AppService],

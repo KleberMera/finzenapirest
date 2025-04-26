@@ -37,11 +37,6 @@ export class TicketsService {
     { name: 'Otros Ingresos', icon: 'pi pi-money-bill', keywords: ['otro', 'varios', 'misceláneo', 'regalo', 'herencia', 'premio'] }
   ];
 
-  // Método para obtener todas las categorías
-  private getAllCategories() {
-    return [...this.sriExpenseCategories, ...this.incomeCategories];
-  }
-
   // Método reutilizable para generar el prompt
   private getPromptTemplate(): string {
     // Crear strings para las categorías
@@ -129,11 +124,12 @@ export class TicketsService {
     `;
   }
 
-  async processReceipt(userId: number, filePath: string, mimeType: string) {
+  async processReceipt(userId: number, filePath: string, mimeType: string, s3Key: string) {
     // Generar el prompt para análisis de imagen
     const prompt = this.getReceiptPrompt(filePath);
+    log('prompt', prompt);
   
-    const extractedText = await this.generativeAIService.analyzeImage(filePath, mimeType, prompt);
+    const extractedText = await this.generativeAIService.analyzeImageFromUrl(filePath, mimeType, prompt);
   
     // Parsear la información
     const parsedData = this.parseExtractedText(extractedText);
@@ -141,7 +137,7 @@ export class TicketsService {
     console.log('Información extraída:', parsedData);
   
     // Crear o verificar categoría y transacción
-    return await this.saveTransaction(userId, parsedData);
+    return await this.saveTransaction(userId, parsedData, s3Key);
   }
 
   async processTextTransaction(userId: number, text: string) {
@@ -167,7 +163,7 @@ export class TicketsService {
   }
   
    
-  private async saveTransaction(userId: number, parsedData: any) {
+  private async saveTransaction(userId: number, parsedData: any, s3Key?: string) {
     const {
       amount,
       description,
@@ -211,6 +207,7 @@ export class TicketsService {
         amount: parseFloat(amount),
         date,
         time,
+        receiptImageS3Key: s3Key,
       },
       include: {
         category: true // Incluir los datos de la categoría relacionada
