@@ -15,13 +15,13 @@ export class S3Service {
     constructor(private configService: ConfigService) {
       // Configurar el cliente S3
       this.s3Client = new S3Client({
-        region: process.env.AWS_REGION,
+        region: process.env.NEST_AWS_REGION,
         credentials: {
-          accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+          accessKeyId: process.env.NEST_AWS_ACCESS_KEY_ID,
+          secretAccessKey: process.env.NEST_AWS_SECRET_ACCESS_KEY,
         },
       });
-      this.bucket = process.env.AWS_S3_BUCKET_NAME;
+      this.bucket = process.env.NEST_AWS_S3_BUCKET_NAME;
     }
 
 
