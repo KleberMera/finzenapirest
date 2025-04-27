@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { GoogleGenAI } from '@google/genai';
 import * as fs from 'fs';
-import axios from 'axios';
 @Injectable()
 export class GenerativeAiService {
   private genAI: GoogleGenAI;
@@ -10,7 +9,7 @@ export class GenerativeAiService {
 
   constructor() {
     this.genAI = new GoogleGenAI({
-      apiKey: process.env.API_KEY,
+      apiKey: process.env.GOOGLE_API_KEY,
     });
   }
 
@@ -105,24 +104,24 @@ export class GenerativeAiService {
   }
 
   // Nuevo método para analizar imágenes desde URL (S3)
-  async analyzeImageFromUrl(
-    imageUrl: string, 
-    mimeType: string, 
-    prompt: string
-  ): Promise<string> {
-    try {
-      // Descargar la imagen desde la URL de S3 a un buffer en memoria
-      const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
-      const imageBuffer = Buffer.from(response.data, 'binary');
+  // async analyzeImageFromUrl(
+  //   imageUrl: string, 
+  //   mimeType: string, 
+  //   prompt: string
+  // ): Promise<string> {
+  //   try {
+  //     // Descargar la imagen desde la URL de S3 a un buffer en memoria
+  //     const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+  //     const imageBuffer = Buffer.from(response.data, 'binary');
       
-      // Convertir a base64
-      const base64Data = imageBuffer.toString('base64');
+  //     // Convertir a base64
+  //     const base64Data = imageBuffer.toString('base64');
       
-      // Usar el método base para analizar la imagen
-      return this.analyzeImageBase(base64Data, mimeType, prompt);
-    } catch (error) {
-      console.error('Error al procesar la imagen desde URL:', error);
-      throw new Error(`Error al procesar la imagen desde URL: ${error.message}`);
-    }
-  }
+  //     // Usar el método base para analizar la imagen
+  //     return this.analyzeImageBase(base64Data, mimeType, prompt);
+  //   } catch (error) {
+  //     console.error('Error al procesar la imagen desde URL:', error);
+  //     throw new Error(`Error al procesar la imagen desde URL: ${error.message}`);
+  //   }
+  // }
 }
