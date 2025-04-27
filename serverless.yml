@@ -10,7 +10,9 @@ provider:
   memorySize: 2048
   logRetentionInDays: 1
   timeout: 15
-
+  apiGateway:
+    binaryMediaTypes:
+      - '*/*'
 
 functions:
   api:
@@ -34,8 +36,6 @@ functions:
         - '!node_modules/@prisma/**'
         - '!node_modules/@angular-devkit/**'
 
-
-      
 plugins:
   - serverless-jetpack
   - serverless-offline
