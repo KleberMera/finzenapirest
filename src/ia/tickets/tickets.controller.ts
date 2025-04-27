@@ -27,7 +27,7 @@ export class TicketsController {
   }
 
   @Post('process-receipt/:userId')
-  @UseInterceptors(FileInterceptor('file')) // Asegúrate de que el nombre coincida con el campo en Insomnia
+  @UseInterceptors(FileInterceptor('file'))
   async processReceipt(
     @UploadedFile() file: Express.Multer.File,
     @Param('userId') userId: string,
@@ -35,24 +35,20 @@ export class TicketsController {
     if (!file) {
       throw new Error('No se ha subido ningún archivo');
     }
-
-    // Subir el archivo directamente a S3
-    const s3Key = await this.s3Service.uploadFile(file, parseInt(userId));
-    
-    // Obtener URL firmada para acceder al archivo
-    const fileUrl =  this.s3Service.getPublicUrl(s3Key);
-
-    console.log('Archivo subido a S3:', s3Key);
-    console.log('URL de acceso temporal:', fileUrl);
-
-    // Procesar el recibo con la URL en lugar de la ruta local
+  
+    // Procesar la imagen directamente desde el buffer sin subirla a S3 aún
     const transaction = await this.ticketsService.processReceipt(
       parseInt(userId),
-      fileUrl,
+      file.buffer, // Pasamos el buffer en lugar de una URL
       file.mimetype,
-      s3Key,
     );
+  
+    // Una vez que la transacción está guardada, subimos la imagen a S3
+    const s3Key = await this.s3Service.uploadFile(file, parseInt(userId));
     
-    return { message: 'Transacción procesada con éxito', transaction };
+    // Opcional: Actualizar la transacción con la clave de S3 si es necesario
+    await this.ticketsService.updateTransactionWithS3Key(transaction.id, s3Key);
+  
+    return { message: 'Transacción procesada y archivo subido con éxito', transaction };
   }
 }

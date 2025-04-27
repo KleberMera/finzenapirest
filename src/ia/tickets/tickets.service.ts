@@ -48,10 +48,18 @@ export class TicketsService {
       .map(cat => `"${cat.name}" (icon: "${cat.icon}")`)
       .join(', ');
 
-      const l = "es"
       const t = new Date()
-      const datenew = format(t, "YYYY-MM-DD", l)
-      const timenew = format(t, "hh:mm:ss", l)
+      const datenew =format({
+        date: t,
+        format: "YYYY-MM-DD",
+        tz: "America/Guayaquil",
+      })
+      const timenew = format({
+        date: t,
+        format: "hh:mm:ss",
+        tz: "America/Guayaquil",
+      })
+      
       
 
     return `
@@ -123,21 +131,21 @@ export class TicketsService {
       ${this.getPromptTemplate()}
     `;
   }
-
-  async processReceipt(userId: number, filePath: string, mimeType: string, s3Key: string) {
+  async processReceipt(userId: number, fileBuffer: Buffer, mimeType: string) {
     // Generar el prompt para análisis de imagen
-    const prompt = this.getReceiptPrompt(filePath);
-    log('prompt', prompt);
+    const prompt = this.getReceiptPrompt('Imagen en memoria');
   
-    const extractedText = await this.generativeAIService.analyzeImageFromUrl(filePath, mimeType, prompt);
+    // Convertir el buffer a base64 para pasarlo a la IA
+    const base64Data = fileBuffer.toString('base64');
+    const extractedText = await this.generativeAIService.analyzeImageBase(base64Data, mimeType, prompt);
   
     // Parsear la información
     const parsedData = this.parseExtractedText(extractedText);
   
     console.log('Información extraída:', parsedData);
   
-    // Crear o verificar categoría y transacción
-    return await this.saveTransaction(userId, parsedData, s3Key);
+    // Guardar la transacción sin la clave de S3 por ahora
+    return await this.saveTransaction(userId, parsedData);
   }
 
   async processTextTransaction(userId: number, text: string) {
@@ -162,6 +170,12 @@ export class TicketsService {
     };
   }
   
+  async updateTransactionWithS3Key(transactionId: number, s3Key: string) {
+    return await this.prisma.transaction.update({
+      where: { id: transactionId },
+      data: { receiptImageS3Key: s3Key },
+    });
+  }
    
   private async saveTransaction(userId: number, parsedData: any, s3Key?: string) {
     const {
