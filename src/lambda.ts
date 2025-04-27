@@ -6,7 +6,7 @@ import { Context, Handler } from 'aws-lambda';
 import express from 'express';
 import { AppModule } from './app.module';
 import * as firebaseAdmin from 'firebase-admin';
-import { serviceAccount } from './libs/services-account';
+import { serviceAccount } from './config/services-account';
 
 let cachedServer: Handler;
 
