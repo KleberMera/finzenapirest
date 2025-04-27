@@ -7,7 +7,6 @@ import { MulterModule } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { S3Service } from 'src/s3/s3.service';
 import { ConfigModule } from '@nestjs/config';
-;
 
 
 

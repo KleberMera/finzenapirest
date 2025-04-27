@@ -132,19 +132,18 @@ export class TicketsService {
     `;
   }
   async processReceipt(userId: number, fileBuffer: Buffer, mimeType: string) {
-    // Generar el prompt para análisis de imagen
     const prompt = this.getReceiptPrompt('Imagen en memoria');
   
-    // Convertir el buffer a base64 para pasarlo a la IA
+    // Agregar logs para depuración
+    console.log(`Tamaño del buffer: ${fileBuffer.length} bytes`);
+    console.log(`MimeType: ${mimeType}`);
     const base64Data = fileBuffer.toString('base64');
-    const extractedText = await this.generativeAIService.analyzeImageBase(base64Data, mimeType, prompt);
+    console.log(`Inicio de base64: ${base64Data.substring(0, 100)}...`);
   
-    // Parsear la información
+    const extractedText = await this.generativeAIService.analyzeImageBase(base64Data, mimeType, prompt);
     const parsedData = this.parseExtractedText(extractedText);
   
     console.log('Información extraída:', parsedData);
-  
-    // Guardar la transacción sin la clave de S3 por ahora
     return await this.saveTransaction(userId, parsedData);
   }
 

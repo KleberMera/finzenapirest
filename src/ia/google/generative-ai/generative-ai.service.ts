@@ -64,6 +64,7 @@ export class GenerativeAiService {
       {
         role: 'user',
         parts: [
+          
           {
             inlineData: {
               data: base64Data,
