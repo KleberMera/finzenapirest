@@ -45,7 +45,7 @@ export class GenerativeAiService {
     }
     return fullText;
   }
-  
+
   async analyzeImageBase(
     base64Data: string,
     mimeType: string,
@@ -63,7 +63,6 @@ export class GenerativeAiService {
       {
         role: 'user',
         parts: [
-          
           {
             inlineData: {
               data: base64Data,
@@ -99,29 +98,8 @@ export class GenerativeAiService {
     // Read and encode file as base64
     const fileData = fs.readFileSync(filePath);
     const base64Data = fileData.toString('base64');
-    
+
     return this.analyzeImageBase(base64Data, mimeType, prompt);
   }
 
-  // Nuevo método para analizar imágenes desde URL (S3)
-  // async analyzeImageFromUrl(
-  //   imageUrl: string, 
-  //   mimeType: string, 
-  //   prompt: string
-  // ): Promise<string> {
-  //   try {
-  //     // Descargar la imagen desde la URL de S3 a un buffer en memoria
-  //     const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
-  //     const imageBuffer = Buffer.from(response.data, 'binary');
-      
-  //     // Convertir a base64
-  //     const base64Data = imageBuffer.toString('base64');
-      
-  //     // Usar el método base para analizar la imagen
-  //     return this.analyzeImageBase(base64Data, mimeType, prompt);
-  //   } catch (error) {
-  //     console.error('Error al procesar la imagen desde URL:', error);
-  //     throw new Error(`Error al procesar la imagen desde URL: ${error.message}`);
-  //   }
-  // }
 }

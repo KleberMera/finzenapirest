@@ -23,6 +23,7 @@ import { ReportModule } from './modules/report/report.module';
 import { FinanceModule } from './modules/finance/finance.module';
 import { FcmNotificationModule } from './modules/fcm-notification/fcm-notification.module';
 import { S3Module } from './config/s3/s3.module';
+import { SnowballModule } from './modules/method/snowball/snowball.module';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { S3Module } from './config/s3/s3.module';
     FinanceModule,
     FcmNotificationModule,
     S3Module,
+    SnowballModule,
   ],
   controllers: [AppController],
   providers: [AppService],
