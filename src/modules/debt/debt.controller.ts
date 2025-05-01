@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Put } from '@nestjs/common';
+import {  Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Put } from '@nestjs/common';
 import { DebtService } from './debt.service';
 import { DebtDTO, UpdateDebtAmortizationsDto, UpdateStatusDto } from 'src/models/deb.interface';
 
@@ -58,4 +58,15 @@ export class DebtController {
   async deleteDebt(@Param('id', ParseIntPipe) id: number) {
     return await this.debtService.deleteDebt(id);
   }
+
+
+  @Post('user/debtsIds/:userId')
+  async getDebtsByUser(
+    @Param('userId', ParseIntPipe) userId: number,
+    @Body('debtIds') debtIds?: number[],
+  ) {
+    return this.debtService.findDebtsByUserWithAmortizations(userId, debtIds);
+  }
+    
+  
 }

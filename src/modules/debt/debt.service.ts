@@ -359,4 +359,60 @@ export class DebtService {
       throw new Error(`Error al borrar la deuda: ${error.message}`);
     }
   }
+
+
+  //Listar deuda por usuario y por varios ids de deuda
+
+  async findDebtsByUserWithAmortizations(
+    userId: number,
+    debtIds?: number[]
+  ) {
+    // Base query with user filter
+    const whereClause: any = {
+      user_id: userId,
+    };
+
+    // Add debt IDs filter if provided
+    if (debtIds && debtIds.length > 0) {
+      whereClause.id = {
+        in: debtIds,
+      };
+    }
+
+    // Get debts with their amortizations
+    const debts = await this.prismaService.debt.findMany({
+      where: whereClause,
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        amount: true,
+        interest_rate: true,
+        duration_months: true,
+        method: true,
+        start_date: true,
+        end_date: true,
+        status: true,
+        notifyEnabled: true,
+        daysBeforeNotify: true,
+        // Exclude createdAt and updatedAt
+        amortizations: {
+          select: {
+            id: true,
+            number_months: true,
+            date: true,
+            quota: true,
+            interest: true,
+            amortized: true,
+            outstanding: true,
+            status: true,
+            // Exclude createdAt and updatedAt
+          },
+        },
+      },
+    });
+
+    return debts;
+  }
+
 }

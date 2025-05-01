@@ -1,5 +1,5 @@
 export interface Salary {
-  id: number;
+  id?: number;
   user_id: number;
   salary_amount: number;
   effective_date: string;

@@ -29,7 +29,9 @@ export class SalaryService {
   async createSalary(data: Salary) {
     log(data);
     const salary = await this.prisma.salaryHistory.create({
-      data,
+       data: {
+        ...data,
+       }
     });
     return {
       message: 'Salary created successfully',
@@ -45,7 +47,9 @@ export class SalaryService {
   async updateSalary(id: number, data: Salary) {
     const salary = await this.prisma.salaryHistory.update({
       where: { id },
-      data,
+      data: {
+        ...data,
+      },
     });
     return {
       message: 'Salary updated successfully',
