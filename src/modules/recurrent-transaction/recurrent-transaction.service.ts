@@ -107,8 +107,8 @@ export class RecurrentTransactionService {
         data: {
           transactionId: transactionId,
           frequency: recurrenceConfig.frequency,
-          nextExecutionDate: format(new Date(recurrenceConfig.nextExecutionDate), 'YYYY-MM-DD', 'es'),
-          endDate: format(new Date(recurrenceConfig.endDate), 'YYYY-MM-DD', 'es'),
+          nextExecutionDate: recurrenceConfig.nextExecutionDate,
+          endDate: recurrenceConfig.endDate,
           dayOfMonth: recurrenceConfig.dayOfMonth,
           dayOfWeek: recurrenceConfig.dayOfWeek
         }
