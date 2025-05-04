@@ -28,8 +28,7 @@ functions:
       individually: true
       include:
         - '!generated/prisma/query_engine-windows.dll.node'
-        - '!generated/prisma/query_engine-windows.dll.node.tmp52124'
-        - '!generated/prisma/query_engine-windows.dll.node.tmp3240'
+        - '!generated/prisma/query_engine-windows.dll.node.tmp**'
         - '!generated/prisma/schema.prisma'
         - '!generated.zip'
         - '!node_modules/prisma/**'

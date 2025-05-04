@@ -26,7 +26,9 @@ export class TransactionController {
 
   @Get('user/name/:userId')
   async getTransactionByUserIdName(@Param('userId') userId: string) {
-    return await this.transactionService.getTransactionByUserIdName(Number(userId));
+    return await this.transactionService.getTransactionByUserIdName(
+      Number(userId),
+    );
   }
 
   @Post()
@@ -66,32 +68,32 @@ export class TransactionController {
         endDate,
         today,
         all: all === 'true', // Convertir string a boolean
-      }
+      },
     );
   }
 
-
- 
-
   @Post('user/total/month')
-  async getTotalExpenseByUserAndMonth(
-    @Body() request: MonthlyExpenseRequest
-  ) {
+  async getTotalExpenseByUserAndMonth(@Body() request: MonthlyExpenseRequest) {
     return await this.transactionService.getTotalExpenseByUserAndMonth(
       request.userId,
       request.month,
-      request.year
+      request.year,
     );
   }
 
   @Post('user/total/income/month')
-  async getTotalIncomeByUserAndMonth(
-    @Body() request: MonthlyExpenseRequest
-  ) {
+  async getTotalIncomeByUserAndMonth(@Body() request: MonthlyExpenseRequest) {
     return await this.transactionService.getTotalIncomeByUserAndMonth(
       request.userId,
       request.month,
-      request.year
+      request.year,
+    );
+  }
+
+  @Get('category/:categoryId')
+  async getTransactionByCategoryId(@Param('categoryId') categoryId: string) {
+    return await this.transactionService.getTransactionByCategoryId(
+      Number(categoryId),
     );
   }
 }

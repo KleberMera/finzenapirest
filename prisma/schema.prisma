@@ -5,8 +5,8 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client-js"
-  output   = "../generated/prisma"
+  provider      = "prisma-client-js"
+  output        = "../generated/prisma"
   binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
@@ -147,17 +147,35 @@ model Category {
 }
 
 model Transaction {
-  id          Int      @id @default(autoincrement())
-  category_id Int
-  category    Category @relation(fields: [category_id], references: [id])
-  name        String?
-  description String?
-  amount      Decimal
-  date        String
-  time        String?
+  id                Int                   @id @default(autoincrement())
+  category_id       Int
+  category          Category              @relation(fields: [category_id], references: [id])
+  name              String?
+  description       String?
+  amount            Decimal
+  date              String
+  time              String?
   receiptImageS3Key String? // Clave del objeto en S3 para el recibo
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  isRecurring       Boolean               @default(false)
+  recurringConfig   RecurringTransaction? // Relación uno a uno
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+}
+
+model RecurringTransaction {
+  id                Int        @id @default(autoincrement())
+  transaction       Transaction @relation(fields: [transactionId], references: [id])
+  transactionId     Int        @unique // Relación uno a uno con Transaction
+  frequency         String     // "Mensual", "Semanal", "Diario", "Quincenañ".
+  nextExecutionDate String
+  endDate           String?
+  dayOfMonth        Int?       // Para transacciones mensuales (día del mes)
+  dayOfWeek         Int?       // Para transacciones semanales (día de la semana)
+  lastExecuted      String?  // Última vez que se generó una transacción
+  generatedTransactions Int    @default(0) // Contador de transacciones generadas
+  isActive          Boolean    @default(true) // Estado de activación
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
 }
 
 model Meta {

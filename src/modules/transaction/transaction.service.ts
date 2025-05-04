@@ -270,5 +270,23 @@ export class TransactionService {
   }
 
 
+  //Listar transacciones por id de categoria
+  async getTransactionByCategoryId(categoryId: number) {
+    log(categoryId)
+    const transactions = await this.prismaService.transaction.findMany({
+      where: {
+        category_id: categoryId,
+      },
+      include: {
+        recurringConfig : true
+      }
+    });
+    return {
+      message: 'Transacciones cargadas con éxito',
+      data: transactions,
+    };
+  }
+
+
   
 }
