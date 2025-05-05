@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Request } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Request } from '@nestjs/common';
 import { RecurrentTransactionService } from './recurrent-transaction.service';
 import { CreateRecurrentTransactionDto, UpdateRecurrentTransactionDto } from 'src/models/recurrent/create-recurrent-transaction.dto';
 
@@ -24,10 +24,9 @@ export class RecurrentTransactionController {
     );
   }
 
-  @Get()
-  findAll(@Request() req, @Query('active') active?: string) {
-    const isActive = active === 'true' ? true : active === 'false' ? false : undefined;
-    return this.recurrentTransactionService.findAllByUser(req.user.id, isActive);
+  @Get(':userId')
+  findAll(@Param('userId') userId: string) {
+    return this.recurrentTransactionService.findAllByUser(Number(userId));
   }
 
   @Get(':id')
@@ -66,4 +65,8 @@ export class RecurrentTransactionController {
   remove(@Param('id') id: string, @Request() req) {
     return this.recurrentTransactionService.remove(parseInt(id), req.user.id);
   }
+
+
+
+
 }

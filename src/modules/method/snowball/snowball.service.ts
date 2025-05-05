@@ -16,7 +16,24 @@ export class SnowballService {
               name: true,
               interest_rate: true,
               amount: true,
+              duration_months: true,
+              start_date: true,
+              end_date: true,
+              amortizations: {
+                 where: {
+                   status: 'Pagado',
+                 },
+                 select: {
+                  quota: true,
+                  number_months: true,
+                  date: true,
+                  status: true,
+
+
+                 }
+              }
             },
+
           });
     
           return {

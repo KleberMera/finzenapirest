@@ -120,20 +120,22 @@ export class RecurrentTransactionService {
       };
     }
   
-    async findAllByUser(userId: number, isActive?: boolean) {
+    async findAllByUser(userId: number) {
       const transactions = await this.prisma.transaction.findMany({
         where: {
           category: {
             user_id: userId
           },
           isRecurring: true,
-          recurringConfig: isActive !== undefined ? {
-            isActive: isActive
-          } : undefined
+          
         },
         include: {
-          category: true,
-          recurringConfig: true
+          category: {
+            select: {
+              type: true,
+              icon  : true,
+            },
+          },
         },
         orderBy: {
           createdAt: 'desc'
