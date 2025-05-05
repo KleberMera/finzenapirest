@@ -17,6 +17,7 @@ export interface DebtDTO {
   amount: Decimal;
   interest_rate: Decimal;
   duration_months: number;
+  duration_type: string;
   method: string;
   start_date: string;
   end_date: string;

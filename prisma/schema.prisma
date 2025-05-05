@@ -108,6 +108,7 @@ model Debt {
   interest_rate    Decimal?
   duration_months  Int?
   method           String?
+  duration_type    String?        @default("months")
   start_date       String?
   end_date         String?
   status           String?        @default("Pendiente")

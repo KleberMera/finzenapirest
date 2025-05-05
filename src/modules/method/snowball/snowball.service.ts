@@ -19,6 +19,7 @@ export class SnowballService {
               duration_months: true,
               start_date: true,
               end_date: true,
+              duration_type: true,
               amortizations: {
                  where: {
                    status: 'Pagado',
@@ -35,7 +36,9 @@ export class SnowballService {
     // Procesar los datos para agregar la información adicional
     const processedDebts = debts.map(debt => {
       // Calcular cuotas pagadas
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       const paidAmortizations = debt.amortizations.filter(a => a.status === 'Pagado');
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       const totalPaidAmount = paidAmortizations.reduce((sum, a) => sum + Number(a.quota), 0);
       const paidInstallmentsCount = paidAmortizations.length;
       
