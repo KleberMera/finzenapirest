@@ -28,18 +28,36 @@ export class SnowballService {
                   number_months: true,
                   date: true,
                   status: true,
-
-
                  }
               }
             },
-
           });
-    
-          return {
-            message: 'Deudas cargadas con éxito',
-            data: debts,
-          };
+    // Procesar los datos para agregar la información adicional
+    const processedDebts = debts.map(debt => {
+      // Calcular cuotas pagadas
+      const paidAmortizations = debt.amortizations.filter(a => a.status === 'Pagado');
+      const totalPaidAmount = paidAmortizations.reduce((sum, a) => sum + Number(a.quota), 0);
+      const paidInstallmentsCount = paidAmortizations.length;
+      
+      // Calcular cuotas pendientes
+      const remainingInstallments = debt.duration_months - paidInstallmentsCount;
+      
+      // Calcular monto pendiente por pagar
+      const remainingAmount = Number(debt.amount) - totalPaidAmount;
+
+      return {
+        ...debt,
+        totalPaidAmount,
+        paidInstallmentsCount,
+        remainingInstallments,
+        remainingAmount
+      };
+    });
+
+    return {
+      message: 'Deudas cargadas con éxito',
+      data: processedDebts,
+    };
         } catch (error) {
           if (error instanceof Error) {
             throw error;
