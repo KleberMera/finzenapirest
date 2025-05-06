@@ -20,6 +20,7 @@ export class SnowballService {
               start_date: true,
               end_date: true,
               duration_type: true,
+              method: true,
               amortizations: {
                  where: {
                    status: 'Pagado',
@@ -28,6 +29,7 @@ export class SnowballService {
                   quota: true,
                   number_months: true,
                   date: true,
+                  interest: true,
                   status: true,
                  }
               }
