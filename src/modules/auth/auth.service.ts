@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -32,43 +33,58 @@ export class AuthService {
    * @param user - User data with email and password.
    * @returns Authentication response with user data and token.
    */
-  async login(user: UserDTO) {
-    console.log('Attempting login with email:', user.email);
-    try {
-      const userData = await this.prismaService.user.findUnique({
-        where: { email: user.email },
-      });
+async login(user: UserDTO) {
+  console.log('Attempting login with email:', user.email);
+  try {
+    const userData = await this.prismaService.user.findUnique({
+      where: { email: user.email },
+    });
 
-      console.log('User data retrieved:', userData ? userData.id : 'Not found');
+    console.log('User data retrieved:', userData ? userData.id : 'Not found');
 
-      if (!userData) {
-        throw new BadRequestException('Usuario o contraseña invalidos');
-      }
-
-      const isPasswordMatch = await compare(user.password, userData.password);
-      console.log('Password match result:', isPasswordMatch);
-
-      if (!isPasswordMatch) {
-        throw new BadRequestException('Usuario o contraseña invalidos');
-      }
-
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { password, ...userWithoutPassword } = userData;
-      const payload = userWithoutPassword;
-      const access_token = await this.jwtService.signAsync(payload);
-
-      return {
-        message: 'Usuario autenticado con éxito',
-        data: userWithoutPassword,
-        access_token,
-      };
-    } catch (error) {
-      if (error instanceof BadRequestException) {
-        throw error;
-      }
-      throw new Error(`Error al autenticar el usuario: ${error.message}`);
+    if (!userData) {
+      throw new BadRequestException('Usuario o contraseña invalidos');
     }
+
+    console.log('Stored password:', userData.password); // Log para verificar la contraseña almacenada
+    console.log('Provided password:', user.password); // Log para verificar la contraseña proporcionada
+
+    // Validar que userData.password sea una cadena válida
+    if (!userData.password || typeof userData.password !== 'string') {
+      console.error('Invalid stored password format:', userData.password);
+      throw new BadRequestException('Usuario o contraseña invalidos');
+    }
+
+    const isPasswordMatch = await compare(user.password, userData.password);
+    console.log('Password match result:', isPasswordMatch);
+
+    if (!isPasswordMatch) {
+      throw new BadRequestException('Usuario o contraseña invalidos');
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password, ...userWithoutPassword } = userData;
+    const payload = userWithoutPassword;
+    const access_token = await this.jwtService.signAsync(payload);
+
+    return {
+      message: 'Usuario autenticado con éxito',
+      data: userWithoutPassword,
+      access_token,
+    };
+  } catch (error) {
+    console.error('Error during login:', error); // Log del error completo
+    if (error instanceof BadRequestException) {
+      throw error;
+    }
+    // Manejar errores de comparación como credenciales inválidas
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+    if (error.message.includes('Illegal arguments')) {
+      throw new BadRequestException('Usuario o contraseña invalidos');
+    }
+    throw new InternalServerErrorException(`Error al autenticar el usuario: ${error.message}`);
   }
+}
 
   /**
    * Registers a new user after checking for duplicates.
