@@ -79,7 +79,6 @@ export class SnowballService {
   //Crear plan estratégico
   async createStrategyPlan(userId: number, data: any) {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       const strategyPlan = await this.prismaService.strategyPlan.create({
         data: {
           userId,
@@ -104,7 +103,6 @@ export class SnowballService {
   //Obtener el ultimo plan de la ultima fecha y hora
   async getStrategyPlan(userId: number) {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       const strategyPlan = await this.prismaService.strategyPlan.findFirst({
         where: {
           userId,
@@ -128,7 +126,7 @@ export class SnowballService {
   //Eliminar el plan estratégico
   async deleteStrategyPlan(id: number, userId: number) {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+
       const strategyPlan = await this.prismaService.strategyPlan.delete({
         where: {
           id,
