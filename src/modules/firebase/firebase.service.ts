@@ -68,7 +68,7 @@ export class FirebaseService {
       const access_token = await this.jwtService.signAsync(payload);
 
       return {
-        message: 'Usuario autenticado con éxito via Google',
+        message: 'Usuario autenticado con éxito',
         data: userWithoutPassword,
         access_token: access_token,
       };

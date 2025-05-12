@@ -20,6 +20,7 @@ const encrypt = async (password: string, salt = saltOrRounds) => {
 const compare = async (password: string, hash: string) => {
   return await bcrypt.compare(password, hash);
 };
+import { customAlphabet } from 'nanoid';
 
 @Injectable()
 export class AuthService {
@@ -28,12 +29,16 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
+  private readonly nanoid = customAlphabet('abcdefghijklmnopqrstuvwxyz0123456789', 6);
+
   /**
    * Authenticates a user and returns a JWT token.
    * @param user - User data with email and password.
    * @returns Authentication response with user data and token.
    */
 async login(user: UserDTO) {
+
+  
   console.log('Attempting login with email:', user.email);
   try {
     const userData = await this.prismaService.user.findUnique({
@@ -93,23 +98,35 @@ async login(user: UserDTO) {
    */
   async signUp(user: UserDTO2) {
     try {
-      const existingUser = await this.prismaService.user.findFirst({
-        where: {
-          OR: [
-            { username: user.username },
-            { email: user.email },
-          ],
-        },
+      // Check for existing email
+      const existingEmail = await this.prismaService.user.findUnique({
+        where: { email: user.email },
       });
 
-      if (existingUser) {
-        throw new BadRequestException('El usuario ya existe');
+      if (existingEmail) {
+        throw new BadRequestException('El correo electrónico ya está registrado');
+      }
+
+      // Check for existing username and generate a new one if needed
+      let finalUsername = user.username;
+      let counter = 1;
+      
+      while (true) {
+        const existingUsername = await this.prismaService.user.findUnique({
+          where: { username: finalUsername },
+        });
+
+        if (!existingUsername) break;
+        
+        finalUsername = `${user.username}${counter}${this.nanoid()}`;
+        counter++;
       }
 
       const hashedPassword = await encrypt(user.password);
       const newUser = await this.prismaService.user.create({
         data: {
           ...user,
+          username: finalUsername,
           password: hashedPassword,
         },
       });
