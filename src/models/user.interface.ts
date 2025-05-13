@@ -20,4 +20,6 @@ export interface UserDTO2 {
   email: string;
   password: string;
   status: boolean;
+  phone?: string;
+  firebaseUid?: string;
 }

@@ -6,6 +6,7 @@ import {
   HttpStatus,
   Param,
   Post,
+  Put,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { UserDTO } from 'src/models/user.interface';
@@ -31,5 +32,11 @@ export class AuthController {
   @Get('user/:id')
   async getUserById(@Param('id') id: string) {
     return await this.authService.getUserById(Number(id));
+  }
+
+
+  @Put('update-user/:id')
+  async updateUserById(@Param('id') id: string, @Body() user: UserDTO) {
+    return await this.authService.updateUserById(Number(id), user);
   }
 }

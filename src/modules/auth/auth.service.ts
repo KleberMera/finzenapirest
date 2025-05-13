@@ -37,8 +37,6 @@ export class AuthService {
    * @returns Authentication response with user data and token.
    */
 async login(user: UserDTO) {
-
-  
   console.log('Attempting login with email:', user.email);
   try {
     const userData = await this.prismaService.user.findUnique({
@@ -165,5 +163,27 @@ async login(user: UserDTO) {
       message: 'Usuario obtenido con éxito',
       data: userWithoutPassword,
     };
+  }
+
+
+  //Actualizar info del usuario por id pero de manera parcial
+  async updateUserById(id: number, user: UserDTO) {
+    try {
+      const updatedUser = await this.prismaService.user.update({
+        where: { id },
+        data: user,
+      });
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { password, ...userWithoutPassword } = updatedUser;
+      return {
+        message: 'Usuario actualizado con éxito',
+        data: userWithoutPassword,
+      };
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new Error(`Error al actualizar el usuario: ${error.message}`);
+    }
   }
 }
