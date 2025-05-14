@@ -176,7 +176,7 @@ async login(user: UserDTO) {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { password, ...userWithoutPassword } = updatedUser;
       return {
-        message: 'Usuario actualizado con éxito',
+        message: 'Perfil actualizado correctamente',
         data: userWithoutPassword,
       };
     } catch (error) {

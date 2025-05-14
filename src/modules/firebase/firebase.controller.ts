@@ -6,7 +6,8 @@ import {
   Post,
 } from '@nestjs/common';
 import { FirebaseService } from './firebase.service';
-
+import { Public } from 'src/guards/token.guard';
+@Public()
 @Controller('firebase')
 export class FirebaseController {
   constructor(private readonly firebaseService: FirebaseService) {}

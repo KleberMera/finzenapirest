@@ -25,12 +25,16 @@ export class TokenGuard implements CanActivate {
       context.getClass(),
     ]);
 
+    console.log('isPublic:', isPublic);
+
     if (isPublic) {
       return true;
     }
 
     const request = context.switchToHttp().getRequest();
     const token = this.extractTokenFromHeader(request);
+
+    console.log('Token:', {token});
     if (!token) {
       throw new UnauthorizedException();
     }
@@ -41,8 +45,9 @@ export class TokenGuard implements CanActivate {
       });
       console.log('Payload:', payload); // Log the payload for debugging
 
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
     } catch (error) {
+      console.error('Error verifying token:', error);
       throw new UnauthorizedException();
     }
 
