@@ -1,20 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/config/prisma/prisma.service';
-import * as webpush from 'web-push';
+import { WebPushService } from 'src/providers/web-push/web-push.service';
+
 
 
 @Injectable()
 export class NotificationsService {
  // private readonly logger = new Logger(NotificationsService.name);
 
-  constructor(private prisma: PrismaService) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-    webpush.setVapidDetails(
-      'mailto:klebermera2024@gmail.com', // tu correo
-      'BB9RG9no5eZuqpw0mqNNTRdo1gzSQJAhVKsI2X8SDuUHnHAKcO8co6UWPkZwykP7OINeSSV3IiN_hjVj_kwhaLM',
-      '4CIL0JhqmwowpCkk0NNlyi7-dx9bACuJEAfDlJcZo5c'
-    );
-  }
+  constructor(private prisma: PrismaService, private webPushService: WebPushService) {}
 
 
  
@@ -81,15 +75,8 @@ async saveSubscription(userId: number, deviceId: number, subscription: any) {
 
       // Enviar y guardar la notificación
       if (notificationContent) {
-        await this.sendNotification(subscription, notificationContent);
-        await this.prisma.notification.create({
-          data: {
-            user_id: userId,
-            title: notificationContent.title,
-            message: notificationContent.body,
-            isRead: false,
-          },
-        });
+        await this.webPushService.sendNotification(subscription, notificationContent);
+        await this.webPushService.saveNotificationToDatabase(userId, notificationContent);
       }
     }
     return existingPreference;
@@ -133,16 +120,10 @@ async saveSubscription(userId: number, deviceId: number, subscription: any) {
 
   // Enviar y guardar la notificación
   if (notificationContent) {
-    await this.sendNotification(subscription, notificationContent);
-    await this.prisma.notification.create({
-      data: {
-        user_id: userId,
-        title: notificationContent.title,
-        message: notificationContent.body,
-        isRead: false,
-      },
-    });
-  }
+    await this.webPushService.sendNotification(subscription, notificationContent);
+    await this.webPushService.saveNotificationToDatabase(userId, notificationContent);
+      
+    }
 
   return newPreference;
 }
@@ -162,23 +143,7 @@ async countSubscriptions(userId: number) {
 
 
    
-  private async sendNotification(subscription: any, notification: { title: string; body: string }) {
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-      await webpush.sendNotification(
-        subscription,
-        JSON.stringify({
-          notification: {
-            title: notification.title,
-            body: notification.body,
-            icon: 'https://fin-zen.vercel.app/favicon.png',
-          }
-        })
-      );
-    } catch (error) {
-      console.error('Error sending notification:', error);
-    }
-  }
+
 
   async getNotificationsByUserId(userId: number) {
     const notifications = await this.prisma.notification.findMany({
@@ -252,40 +217,30 @@ async countSubscriptions(userId: number) {
     for (const pref of preferences) {
       try {
         const subscription = JSON.parse(pref.subscription);
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-        await webpush.sendNotification(
-          subscription,
-          JSON.stringify({
-            notification: {
-              title: notification.title,
-              body: notification.body,
-              icon: 'https://fin-zen.vercel.app/favicon.png',
-            },
-          })
-        );
+        // await webpush.sendNotification(
+        //   subscription,
+        //   JSON.stringify({
+        //     notification: {
+        //       title: notification.title,
+        //       body: notification.body,
+        //       icon: 'https://fin-zen.vercel.app/favicon.png',
+        //     },
+        //   })
+        // );
+
+        await this.webPushService.sendNotification(subscription, notification);
       } catch (error) {
         console.error(`Error enviando notificación a la suscripción ${pref.id}:`, error);
       }
     }
   }
 
-  private async saveNotificationToDatabase(userId: number, notification: { title: string; body: string }) {
-    await this.prisma.notification.create({
-      data: {
-        user_id: userId,
-        title: notification.title,
-        message: notification.body,
-        isRead: false,
-        createdAt: new Date(),
-      },
-    });
-  }
 
 
   async notifyUser(userId: number, notification: { title: string; body: string }) {
     try {
       // Guardar la notificación en la base de datos
-      await this.saveNotificationToDatabase(userId, notification);
+      await this.webPushService.saveNotificationToDatabase(userId, notification);
   
       // Enviar la notificación push
       await this.sendNotificationToUser(userId, notification);

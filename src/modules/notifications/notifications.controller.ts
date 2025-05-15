@@ -1,7 +1,10 @@
 import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
 import { PrismaService } from 'src/config/prisma/prisma.service';
+import { Public } from 'src/guards/token.guard';
 
+
+@Public()
 @Controller('notifications')
 export class NotificationsController {
   constructor(
