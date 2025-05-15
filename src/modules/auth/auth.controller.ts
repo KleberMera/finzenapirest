@@ -45,4 +45,10 @@ export class AuthController {
   async updateUserById(@Param('id') id: string, @Body() user: UserDTO) {
     return await this.authService.updateUserById(Number(id), user);
   }
+
+  @UseGuards(TokenGuard)
+  @Get('user-role/:id')
+  async getUserRoleById(@Param('id') id: string) {
+    return await this.authService.getUserRoleById(Number(id));
+  }
 }

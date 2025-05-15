@@ -186,4 +186,26 @@ async login(user: UserDTO) {
       throw new Error(`Error al actualizar el usuario: ${error.message}`);
     }
   }
+
+
+  //Retornar solo el rol_id el name del rol del usuario
+  async getUserRoleById(id: number) {
+    const user = await this.prismaService.user.findUnique({
+      where: { id },
+      select: {
+        rol_id: true,
+      }
+    });
+
+    console.log(user);
+    if (!user) {
+      throw new NotFoundException(`Usuario con ID ${id} no encontrado`);
+    }
+
+    return {
+      message: 'Rol obtenido con éxito',
+      data: user,
+    };
+  }
+ 
 }
