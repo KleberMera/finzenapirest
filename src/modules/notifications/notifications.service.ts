@@ -217,16 +217,7 @@ async countSubscriptions(userId: number) {
     for (const pref of preferences) {
       try {
         const subscription = JSON.parse(pref.subscription);
-        // await webpush.sendNotification(
-        //   subscription,
-        //   JSON.stringify({
-        //     notification: {
-        //       title: notification.title,
-        //       body: notification.body,
-        //       icon: 'https://fin-zen.vercel.app/favicon.png',
-        //     },
-        //   })
-        // );
+
 
         await this.webPushService.sendNotification(subscription, notification);
       } catch (error) {
@@ -252,22 +243,6 @@ async countSubscriptions(userId: number) {
     }
   }
 
-  // async unsubscribe(userId: number) {
-  //   const result = await this.prisma.notificationPreference.updateMany({
-  //     where: {
-  //       user_id: userId,
-  //     },
-  //     data: {
-  //       pushEnabled: false,
-  //     },
-  //   });
-  
-  //   if (result.count === 0) {
-  //     return { message: 'No se encontraron suscripciones para deshabilitar' };
-  //   }
-  
-  //   return { message: 'Suscripción deshabilitada con éxito' };
-  // }
 
   // @Cron('0 0 * * *')
   // async checkUpcomingPayments() {

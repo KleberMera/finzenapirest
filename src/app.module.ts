@@ -23,8 +23,9 @@ import { ReportModule } from './modules/report/report.module';
 import { FinanceModule } from './modules/finance/finance.module';
 import { FcmNotificationModule } from './modules/fcm-notification/fcm-notification.module';
 import { S3Module } from './config/s3/s3.module';
-import { SnowballModule } from './modules/method/snowball/snowball.module';
+
 import { RecurrentTransactionModule } from './modules/recurrent-transaction/recurrent-transaction.module';
+import { MethodModule } from './modules/method/method.module';
 
 @Module({
   imports: [
@@ -49,7 +50,7 @@ import { RecurrentTransactionModule } from './modules/recurrent-transaction/recu
     FinanceModule,
     FcmNotificationModule,
     S3Module,
-    SnowballModule,
+    MethodModule,
     RecurrentTransactionModule,
   ],
   controllers: [AppController],

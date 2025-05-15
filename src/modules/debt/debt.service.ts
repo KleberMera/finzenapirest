@@ -393,8 +393,6 @@ export class DebtService {
         start_date: true,
         end_date: true,
         status: true,
-        notifyEnabled: true,
-        daysBeforeNotify: true,
         // Exclude createdAt and updatedAt
         amortizations: {
           select: {
