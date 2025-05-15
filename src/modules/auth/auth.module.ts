@@ -12,7 +12,7 @@ import { APP_GUARD } from '@nestjs/core';
     JwtModule.register({
       global: true,
       secret: process.env.JWT_SECRET,
-      signOptions: { expiresIn: '5h' },
+      signOptions: { expiresIn: '60m' },
     }),
   ],
   controllers: [AuthController],
