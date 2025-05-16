@@ -24,6 +24,7 @@ export class WebPushService {
           notification: {
             title: notification.title,
             body: notification.body,
+            
             icon: 'https://fin-zen.vercel.app/favicon.png',
           }
         })
@@ -35,14 +36,19 @@ export class WebPushService {
 
 
 
-  async saveNotificationToDatabase(userId: number, notification: { title: string; body: string }) {
+  async saveNotificationToDatabase(
+    userId: number, 
+    notification: { title: string; body: string },
+    debtId?: number
+  ) {
     await this.prisma.notification.create({
-    data: {
-      user_id: userId,
-      title: notification.title,
-      message: notification.body,
-      isRead: false,
-    },
-  });
-}
+      data: {
+        user_id: userId,
+        title: notification.title,
+        message: notification.body,
+        isRead: false,
+        debt_id: debtId,
+      },
+    });
+  }
 }

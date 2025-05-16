@@ -26,6 +26,7 @@ import { S3Module } from './config/s3/s3.module';
 
 import { RecurrentTransactionModule } from './modules/recurrent-transaction/recurrent-transaction.module';
 import { MethodModule } from './modules/method/method.module';
+import { SendNotificationModule } from './modules/send-notification/send-notification.module';
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { MethodModule } from './modules/method/method.module';
     S3Module,
     MethodModule,
     RecurrentTransactionModule,
+    SendNotificationModule,
   ],
   controllers: [AppController],
   providers: [AppService],
