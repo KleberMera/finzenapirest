@@ -380,11 +380,16 @@ async countSubscriptions(userId: number) {
         daysBeforeNotify: daysBeforeNotify,
       },
     });
+    let message = 'Recibiras notificaciones con ' + daysBeforeNotify + ' dias de anticipacion';
+    // Si el daysBeforeNotify es 0 el mensaje cambia a No recibir notificaciones
+    if (daysBeforeNotify === 0) {
+      message = 'No recibiras notificaciones anticipadas';
+    }
     return {
-      message: 'Recibiras notificaciones con Anticipacion de ' + daysBeforeNotify + ' dias',
+      message: message,
       data: updatedPreferences,
     };
-  }
+  } 
 
 
   //Ver daysBeforeNotify de todos los dispositivos de un usuario
