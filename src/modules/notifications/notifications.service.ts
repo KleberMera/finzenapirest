@@ -202,6 +202,10 @@ async countSubscriptions(userId: number) {
     return { hasSubscription: count > 0 };
   }
 
+
+
+
+ 
   private async sendNotificationToUser(userId: number, notification: { title: string; body: string }) {
     // Buscar todas las suscripciones activas del usuario
     const preferences = await this.prisma.notificationPreference.findMany({
@@ -242,6 +246,8 @@ async countSubscriptions(userId: number) {
       throw new Error('No se pudo enviar ni guardar la notificación');
     }
   }
+
+
 
 
   // @Cron('0 0 * * *')
@@ -358,4 +364,46 @@ async countSubscriptions(userId: number) {
   // }
 
   
+
+  
+  //Actualizar daysBeforeNotify  de las preferencias de notificaciones de todos
+  // Los dispositivos que tengan pushEnabled = true
+  async updateDaysBeforeNotifyAll(daysBeforeNotify: number, userId: number) {
+    const updatedPreferences = await this.prisma.notificationPreference.updateMany({
+      where: {
+        pushEnabled: true,
+        device: {
+          user_id: userId,
+        },
+      },
+      data: {
+        daysBeforeNotify: daysBeforeNotify,
+      },
+    });
+    return {
+      message: 'Recibiras notificaciones con Anticipacion de ' + daysBeforeNotify + ' dias',
+      data: updatedPreferences,
+    };
+  }
+
+
+  //Ver daysBeforeNotify de todos los dispositivos de un usuario
+  async getDaysBeforeNotifyAll(userId: number) {
+    const preferences = await this.prisma.notificationPreference.findMany({
+      where: {
+        device: {
+          user_id: userId,
+        },
+        pushEnabled: true,
+        
+      },
+      select: {
+        daysBeforeNotify: true,
+      }
+    });
+    return {
+      message: 'DaysBeforeNotify de todos los dispositivos',
+      data: preferences,
+    };
+  }
   }

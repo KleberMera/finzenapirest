@@ -72,6 +72,7 @@ model NotificationPreference {
   device       Device?  @relation(fields: [device_id], references: [id]) // Nueva relación
   pushEnabled  Boolean  @default(false)
   subscription String?
+  daysBeforeNotify Int?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
@@ -83,7 +84,6 @@ model Notification {
   title     String
   message   String
   isRead    Boolean  @default(false)
-  daysBeforeNotify Int?
   debt_id   Int?
   debt      Debt?    @relation(fields: [debt_id], references: [id])
   createdAt DateTime @default(now())

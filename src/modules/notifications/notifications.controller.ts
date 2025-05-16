@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
 import { PrismaService } from 'src/config/prisma/prisma.service';
 import { Public } from 'src/guards/token.guard';
@@ -59,5 +59,15 @@ export class NotificationsController {
   @Get('count-subscriptions/:userId')
   async countSubscriptions(@Param() { userId }: { userId: number }) {
     return this.notificationsService.countSubscriptions(Number(userId));
+  }
+
+  @Put('update-days-before-notify-all/:userId')
+  async updateDaysBeforeNotifyAll(@Param() { userId }: { userId: number }, @Body() { daysBeforeNotify }: { daysBeforeNotify: number }) {
+    return this.notificationsService.updateDaysBeforeNotifyAll(Number(daysBeforeNotify), Number(userId));
+  }
+
+  @Get('days-before-notify-all/:userId')
+  async getDaysBeforeNotifyAll(@Param() { userId }: { userId: number }) {
+    return this.notificationsService.getDaysBeforeNotifyAll(Number(userId));
   }
 }
