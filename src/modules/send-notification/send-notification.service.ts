@@ -49,67 +49,89 @@ export class SendNotificationService {
 
       this.logger.log(`Se encontraron ${activePreferences.length} preferencias de notificación activas`);
 
-      // 2. Procesar cada preferencia de notificación
+      // Agrupar preferencias por usuario
+      const preferencesByUser = new Map<number, any[]>();
+      
+      // 2. Agrupar preferencias por usuario
       for (const preference of activePreferences) {
         if (!preference.device || !preference.device.user) {
           this.logger.warn(`Preferencia ID ${preference.id} sin dispositivo o usuario asociado`);
           continue;
         }
 
-        const user = preference.device.user;
-        const daysBeforeNotify = preference.daysBeforeNotify || 0;
-        const subscription = JSON.parse(preference.subscription);
+        const userId = preference.device.user.id;
+        if (!preferencesByUser.has(userId)) {
+          preferencesByUser.set(userId, []);
+        }
+        preferencesByUser.get(userId)?.push(preference);
+      }
 
+      // 3. Procesar cada usuario
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      for (const [userId, userPreferences] of preferencesByUser.entries()) {
+        if (userPreferences.length === 0) continue;
         
-        // 3. Buscar las deudas del usuario
+        const firstPreference = userPreferences[0];
+        const user = firstPreference.device.user;
+        const daysBeforeNotify = firstPreference.daysBeforeNotify || 0;
+
+        // 4. Buscar las deudas del usuario (solo una vez por usuario)
         const userDebts = await this.prisma.debt.findMany({
           where: {
             user_id: user.id,
-            status: 'Pendiente'  // Solo deudas activas/pendientes
+            status: 'Pendiente'
           },
           include: {
             amortizations: {
               where: {
-                status: 'Pendiente'  // Solo amortizaciones pendientes
+                status: 'Pendiente'
               }
             }
           }
         });
 
-        // 4. Verificar amortizaciones próximas a vencer según daysBeforeNotify
+        // 5. Verificar amortizaciones próximas a vencer según daysBeforeNotify
         for (const debt of userDebts) {
           for (const amortization of debt.amortizations) {
             if (!amortization.date) continue;
             
-            // Fecha de vencimiento de la amortización
-            const dueDate = amortization.date; // Formato: "2025-05-19"
-            
-            // Calcular la fecha en que se debe notificar (fecha vencimiento - días de notificación previa)
+            const dueDate = amortization.date;
             const notifyDate = format(
               addDays(parseISO(dueDate), -daysBeforeNotify),
               'yyyy-MM-dd'
             );
             
-            // Si hoy es el día para notificar
             if (notifyDate === formattedToday) {
-              this.logger.log(`
-                ¡NOTIFICACIÓN PENDIENTE!
-                Usuario: ${user.name || user.username || user.email} (ID: ${user.id})
-                Dispositivo: ${preference.device.brand || ''} ${preference.device.model || ''} (ID: ${preference.device.id})
-                Deuda: ${debt.name || 'Sin nombre'} (ID: ${debt.id})
-                Amortización #${amortization.number_months || 'N/A'} (ID: ${amortization.id})
-                Monto cuota: ${amortization.quota.toNumber() || 'N/A'}
-                Fecha vencimiento: ${dueDate}
-                Días de anticipación configurados: ${daysBeforeNotify}
-                Fecha de notificación (hoy): ${formattedToday}
-              `);
-
-              // Aquí se implementaría el envío real de la notificación
-              // this.sendPushNotification(preference, debt, amortization);
-            await  this.webPushService.sendNotification(subscription, {
+              // 6. Guardar notificación en la base de datos (solo una vez por usuario)
+              await this.webPushService.saveNotificationToDatabase(user.id, {
                 title: `Próximo pago: ${debt.name}`,
-                body: `Tu cuota #${amortization.number_months} por ${amortization.quota.toNumber()} vence el ${amortization.date}`,
-              });
+                body: `Tu cuota #${amortization.number_months} por $${amortization.quota.toNumber().toFixed(2)} vence el ${amortization.date}`,
+              }, debt.id);
+              
+              // 7. Enviar notificación a todos los dispositivos del usuario
+              for (const preference of userPreferences) {
+                this.logger.log(`
+                  ¡NOTIFICACIÓN PENDIENTE!
+                  Usuario: ${user.name || user.username || user.email} (ID: ${user.id})
+                  Dispositivo: ${preference.device.brand || ''} ${preference.device.model || ''} (ID: ${preference.device.id})
+                  Deuda: ${debt.name || 'Sin nombre'} (ID: ${debt.id})
+                  Amortización #${amortization.number_months || 'N/A'} (ID: ${amortization.id})
+                  Monto cuota: ${amortization.quota.toNumber() || 'N/A'}
+                  Fecha vencimiento: ${dueDate}
+                  Días de anticipación configurados: ${daysBeforeNotify}
+                  Fecha de notificación (hoy): ${formattedToday}
+                `);
+
+                try {
+                  const subscription = JSON.parse(preference.subscription);
+                  await this.webPushService.sendNotification(subscription, {
+                    title: `Próximo pago: ${debt.name}`,
+                    body: `Tu cuota #${amortization.number_months} por $${amortization.quota.toNumber().toFixed(2)} vence el ${amortization.date}`,
+                  });
+                } catch (error) {
+                  this.logger.error(`Error enviando notificación al dispositivo ${preference.device.id}:`, error);
+                }
+              }
             }
           }
         }
@@ -120,29 +142,6 @@ export class SendNotificationService {
   }
 
  
-    //Método para enviar la notificación push (comentado para simular solo en consola)
-  
-  
-  // private async sendPushNotification(preference, debt, amortization) {
-  //   if (!preference.subscription) {
-  //     this.logger.warn('No hay suscripción configurada para enviar notificación push');
-  //     return;
-  //   }
-    
-  //   const payload = {
-  //     title: `Próximo pago: ${debt.name}`,
-  //     message: `Tu cuota #${amortization.number_months} por ${amortization.quota} vence el ${amortization.date}`,
-  //     data: {
-  //       debtId: debt.id,
-  //       amortizationId: amortization.id
-  //     }
-  //   };
-    
-  //   try {
-  //     await this.webPushService.sendNotification(preference.subscription, payload);
-  //   } catch (error) {
-  //     this.logger.error(`Error al enviar notificación push: ${error.message}`);
-  //   }
-  // }
+
   
 }

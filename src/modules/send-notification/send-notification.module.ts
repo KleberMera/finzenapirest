@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { ScheduleModule } from '@nestjs/schedule';
 import { PrismaModule } from 'src/config/prisma/prisma.module';
 
 import { SendNotificationService } from './send-notification.service';
@@ -8,9 +7,7 @@ import { WebPushService } from 'src/providers/web-push/web-push.service';
 
 @Module({
   imports: [
-    ScheduleModule.forRoot(),
     PrismaModule,
- 
   ],
   controllers: [SendNotificationController],
   providers: [SendNotificationService, WebPushService],
