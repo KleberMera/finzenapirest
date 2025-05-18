@@ -62,8 +62,8 @@ export class RecurrentTransactionController {
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string, @Request() req) {
-    return this.recurrentTransactionService.remove(parseInt(id), req.user.id);
+  remove(@Param('id') id: string, @Body('userId') userId: number) {
+    return this.recurrentTransactionService.remove(Number(id), Number(userId));
   }
 
 
