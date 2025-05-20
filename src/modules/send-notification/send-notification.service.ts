@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Cron } from '@nestjs/schedule';
+
 import { PrismaService } from 'src/config/prisma/prisma.service';
 import { WebPushService } from 'src/providers/web-push/web-push.service';
 import { addDays, format, parseISO } from 'date-fns';
@@ -122,7 +122,7 @@ export class SendNotificationService {
   }
 
  
-  @Cron('*/2 * * * *')
+  //@Cron('*/2 * * * *')
   async checkPendingRecurringTransactions() {
     this.logger.log('Verificando notificaciones pendientes de transacciones recurrentes...');
     
