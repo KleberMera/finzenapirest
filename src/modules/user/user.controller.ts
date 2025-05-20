@@ -27,8 +27,13 @@ export class UserController {
   }
 
   @Delete(':id')
-  async deleteUser(@Param('id') id: number) {
-    return this.userService.deleteUser(id);
+  async deleteUser(@Param('id') id: number, @Body('status') status: boolean) {
+    return this.userService.deleteUser(Number(id), Boolean(status));
+  }
+
+  @Delete(':id/permanent')
+  async permanentDeleteUser(@Param('id') id: number) {
+    return this.userService.permanentDeleteUser(Number(id));
   }
 
   @Put(':id')

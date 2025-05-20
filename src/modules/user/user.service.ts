@@ -63,23 +63,167 @@ export class UserService {
    * @param id - ID del usuario a eliminar
    * @returns El usuario eliminado
    */
-  async deleteUser(id: number) {
+  async deleteUser(id: number, status?: boolean) {
     try {
-      const user = await this.prismaService.user.delete({
+      // Verificar si el usuario existe
+      const existingUser = await this.prismaService.user.findUnique({
         where: { id }
       });
 
-      if (!user) {
+      if (!existingUser) {
         throw new NotFoundException('Usuario no encontrado');
       }
 
-      // No devolver la contraseña en la respuesta
+      // Determinar el nuevo estado
+      // Si se proporciona un estado específico, usar ese valor
+      // Si no, invertir el estado actual
+      const newStatus = status === true ? false : true;
+
+      // Actualizar el estado del usuario
+      const updatedUser = await this.prismaService.user.update({
+        where: { id },
+        data: {
+          status: newStatus
+        }
+      });
+
       return {
-        message: 'Usuario eliminado con éxito',
-        data: user 
+        message: `Usuario ${updatedUser.status ? 'activado' : 'desactivado'} con éxito`,
+        data: updatedUser 
       };
     } catch (error) {
-      throw new BadRequestException('Error al eliminar el usuario');
+      throw new BadRequestException('Error al cambiar el estado del usuario');
+    }
+  }
+
+  /**
+   * Elimina permanentemente un usuario y todos sus datos relacionados
+   * @param id - ID del usuario a eliminar permanentemente
+   * @returns El usuario eliminado
+   */
+  async permanentDeleteUser(id: number) {
+    try {
+      // Verificar si el usuario existe
+      const existingUser = await this.prismaService.user.findUnique({
+        where: { id }
+      });
+  
+      if (!existingUser) {
+        throw new NotFoundException('Usuario no encontrado');
+      }
+  
+      // Eliminar todos los datos relacionados con el usuario en orden para evitar errores de integridad referencial
+      
+      // 1. Eliminar notificaciones
+      await this.prismaService.notification.deleteMany({
+        where: { user_id: id }
+      });
+  
+      // 2. Eliminar dispositivos y preferencias de notificación
+      // Primero obtener todos los dispositivos del usuario
+      const devices = await this.prismaService.device.findMany({
+        where: { user_id: id }
+      });
+      
+      // Eliminar preferencias de notificación para cada dispositivo
+      for (const device of devices) {
+        await this.prismaService.notificationPreference.deleteMany({
+          where: { device_id: device.id }
+        });
+      }
+      
+      // Eliminar dispositivos
+      await this.prismaService.device.deleteMany({
+        where: { user_id: id }
+      });
+  
+      // 3. Eliminar códigos de verificación
+      await this.prismaService.verificationCode.deleteMany({
+        where: { userId: id }
+      });
+  
+      // 4. Eliminar historial de salarios
+      await this.prismaService.salaryHistory.deleteMany({
+        where: { user_id: id }
+      });
+  
+      // 5. Eliminar planes estratégicos
+      await this.prismaService.strategyPlan.deleteMany({
+        where: { userId: id }
+      });
+  
+      // 6. Eliminar metas y sus seguimientos
+      const metas = await this.prismaService.meta.findMany({
+        where: { user_id: id }
+      });
+      
+      for (const meta of metas) {
+        await this.prismaService.metaTracking.deleteMany({
+          where: { meta_id: meta.id }
+        });
+      }
+      
+      await this.prismaService.meta.deleteMany({
+        where: { user_id: id }
+      });
+  
+      // 7. Eliminar deudas y amortizaciones
+      const deudas = await this.prismaService.debt.findMany({
+        where: { user_id: id }
+      });
+      
+      for (const deuda of deudas) {
+        await this.prismaService.amortization.deleteMany({
+          where: { debt_id: deuda.id }
+        });
+      }
+      
+      await this.prismaService.debt.deleteMany({
+        where: { user_id: id }
+      });
+  
+      // 8. Eliminar categorías y transacciones
+      const categorias = await this.prismaService.category.findMany({
+        where: { user_id: id }
+      });
+      
+      for (const categoria of categorias) {
+        const transacciones = await this.prismaService.transaction.findMany({
+          where: { category_id: categoria.id }
+        });
+        
+        // Eliminar configuraciones de transacciones recurrentes
+        for (const transaccion of transacciones) {
+          if (transaccion.isRecurring) {
+            await this.prismaService.recurringTransaction.deleteMany({
+              where: { transactionId: transaccion.id }
+            });
+          }
+        }
+        
+        // Eliminar transacciones
+        await this.prismaService.transaction.deleteMany({
+          where: { category_id: categoria.id }
+        });
+      }
+      
+      // Eliminar categorías
+      await this.prismaService.category.deleteMany({
+        where: { user_id: id }
+      });
+  
+      // 9. Finalmente, eliminar el usuario
+      const deletedUser = await this.prismaService.user.delete({
+        where: { id }
+      });
+  
+      return {
+        message: 'Usuario eliminado permanentemente con éxito',
+        data: deletedUser 
+      };
+    } catch (error) {
+      console.error('Error al eliminar permanentemente el usuario:', error);
+      throw new BadRequestException('Error al eliminar permanentemente el usuario');
     }
   }
 
