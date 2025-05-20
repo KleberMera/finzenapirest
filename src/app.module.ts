@@ -18,8 +18,7 @@ import { GraficModule } from './modules/grafic/grafic.module';
 import { DeviceModule } from './modules/device/device.module';
 import { SalaryModule } from './modules/salary/salary.module';
 
-import { PrinterModule } from './providers/printer/printer.module';
-import { ReportModule } from './modules/report/report.module';
+
 import { FinanceModule } from './modules/finance/finance.module';
 import { FcmNotificationModule } from './modules/fcm-notification/fcm-notification.module';
 import { S3Module } from './config/s3/s3.module';
@@ -47,8 +46,6 @@ import { UserModule } from './modules/user/user.module';
     GraficModule,
     DeviceModule,
     SalaryModule,
-    ReportModule,
-    PrinterModule,
     FinanceModule,
     FcmNotificationModule,
     S3Module,
