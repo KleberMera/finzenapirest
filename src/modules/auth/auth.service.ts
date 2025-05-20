@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call */
 import {
   BadRequestException,
   Injectable,
@@ -49,6 +50,11 @@ async login(user: UserDTO) {
       throw new BadRequestException('Usuario o contraseña invalidos');
     }
 
+    // Validar que el status del usuario esté en true
+    if (!userData.status) {
+      throw new BadRequestException('Usuario inactivo o suspendido');
+    }
+
     console.log('Stored password:', userData.password); // Log para verificar la contraseña almacenada
     console.log('Provided password:', user.password); // Log para verificar la contraseña proporcionada
 
@@ -80,8 +86,7 @@ async login(user: UserDTO) {
     if (error instanceof BadRequestException) {
       throw error;
     }
-    // Manejar errores de comparación como credenciales inválidas
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+
     if (error.message.includes('Illegal arguments')) {
       throw new BadRequestException('Usuario o contraseña invalidos');
     }

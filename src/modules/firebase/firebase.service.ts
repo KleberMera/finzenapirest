@@ -42,7 +42,7 @@ export class FirebaseService {
 
   private readonly nanoid = customAlphabet('abcdefghijklmnopqrstuvwxyz0123456789', 6);
 
-  async loginWithGoogle(idToken: string) {
+async loginWithGoogle(idToken: string) {
     try {
       const decodedToken = await firebaseAdmin.auth().verifyIdToken(idToken) as FirebaseDecodedToken;
       
@@ -61,6 +61,10 @@ export class FirebaseService {
         throw new BadRequestException('Usuario no encontrado. Por favor, regístrese primero.');
       }
 
+      // Validar que el status del usuario esté en true
+      if (!existingUser.status) {
+        throw new BadRequestException('Usuario inactivo o suspendido');
+      }
 
       const { password, createdAt, updatedAt, ...userWithoutPassword } = existingUser;
       const payload = { userWithoutPassword, createdAt, updatedAt };
