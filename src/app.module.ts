@@ -27,6 +27,7 @@ import { RecurrentTransactionModule } from './modules/recurrent-transaction/recu
 import { MethodModule } from './modules/method/method.module';
 import { SendNotificationModule } from './modules/send-notification/send-notification.module';
 import { UserModule } from './modules/user/user.module';
+import { GraficAdminModule } from './modules/admin/grafic-admin/grafic-admin.module';
 
 @Module({
   imports: [
@@ -52,7 +53,8 @@ import { UserModule } from './modules/user/user.module';
     MethodModule,
     RecurrentTransactionModule,
     SendNotificationModule,
-    UserModule
+    UserModule,
+    GraficAdminModule
   ],
   controllers: [AppController],
   providers: [AppService],

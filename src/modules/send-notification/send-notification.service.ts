@@ -4,6 +4,7 @@ import { PrismaService } from 'src/config/prisma/prisma.service';
 import { WebPushService } from 'src/providers/web-push/web-push.service';
 import { addDays, format, parseISO } from 'date-fns';
 import { log } from 'console';
+import { Cron } from '@nestjs/schedule';
 
 @Injectable()
 export class SendNotificationService {
@@ -122,7 +123,7 @@ export class SendNotificationService {
   }
 
  
-  //@Cron('*/2 * * * *')
+  //@Cron('*/1 * * * *')
   async checkPendingRecurringTransactions() {
     this.logger.log('Verificando notificaciones pendientes de transacciones recurrentes...');
     
@@ -245,6 +246,8 @@ export class SendNotificationService {
             }
             
             // 8. Si la fecha de ejecución es hoy, crear la nueva transacción y actualizar la recurrencia
+            log('nextExecutionDate', nextExecutionDate);
+            log('formattedToday', formattedToday);
             if (nextExecutionDate === formattedToday) {
               try {
                 // Crear una nueva transacción basada en la original
