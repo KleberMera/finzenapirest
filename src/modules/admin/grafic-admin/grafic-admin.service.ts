@@ -2,6 +2,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/config/prisma/prisma.service';
 import { format, addMonth, monthStart, monthEnd } from '@formkit/tempo';
+import { log } from 'console';
 
 interface CategoryExpenseDistribution {
   categoryId: number;
@@ -45,9 +46,11 @@ export class GraficAdminService {
         // Crear fecha del primer día del mes usando tempo
         const firstDayOfMonth = new Date(year, month - 1, 1);
         const startDate = format(monthStart(firstDayOfMonth), 'YYYY-MM-DD');
+        log(startDate);
         
         // Crear fecha del último día del mes usando tempo
         const endDate = format(monthEnd(firstDayOfMonth), 'YYYY-MM-DD');
+        log(endDate);
 
         // Obtener transacciones de gastos del mes específico para todos los usuarios
         const transactions = await this.prisma.transaction.findMany({
@@ -78,9 +81,9 @@ export class GraficAdminService {
             }
         });
 
-        // Agrupar por categoría y calcular totales
-        const categoryMap = new Map<number, {
-            categoryName: string;
+        // Agrupar por nombre de categoría (ignorando ID) y calcular totales
+        const categoryMap = new Map<string, {
+            categoryId: number; // Guardamos el primer ID que encontramos
             icon: string;
             totalAmount: number;
             transactionCount: number;
@@ -90,20 +93,20 @@ export class GraficAdminService {
         let grandTotal = 0;
 
         transactions.forEach(transaction => {
-            const categoryId = transaction.category.id;
+            const categoryName = transaction.category.name || 'Sin nombre';
             const amount = Number(transaction.amount);
             const userId = transaction.category.user.id;
             
             grandTotal += amount;
 
-            if (categoryMap.has(categoryId)) {
-                const existing = categoryMap.get(categoryId)!;
+            if (categoryMap.has(categoryName)) {
+                const existing = categoryMap.get(categoryName)!;
                 existing.totalAmount += amount;
                 existing.transactionCount += 1;
                 existing.userIds.add(userId);
             } else {
-                categoryMap.set(categoryId, {
-                    categoryName: transaction.category.name || 'Sin nombre',
+                categoryMap.set(categoryName, {
+                    categoryId: transaction.category.id, // Guardamos el primer ID
                     icon: transaction.category.icon || '💰',
                     totalAmount: amount,
                     transactionCount: 1,
@@ -114,9 +117,9 @@ export class GraficAdminService {
 
         // Convertir a array y calcular porcentajes
         const result: CategoryExpenseDistribution[] = Array.from(categoryMap.entries())
-            .map(([categoryId, data]) => ({
-                categoryId,
-                categoryName: data.categoryName,
+            .map(([categoryName, data]) => ({
+                categoryId: data.categoryId, // Usamos el primer ID que encontramos
+                categoryName,
                 icon: data.icon,
                 totalAmount: data.totalAmount,
                 transactionCount: data.transactionCount,
@@ -189,19 +192,19 @@ export class GraficAdminService {
             }
         });
 
-        // Agrupar por período (año-mes) y categoría
-        const trendMap = new Map<string, Map<number, {
-            categoryName: string;
-            icon: string;
+        // Agrupar por período (año-mes) y nombre de categoría
+        const trendMap = new Map<string, Map<string, {
+            categoryId: number; // Mantenemos el primer ID encontrado
+            icon: string;      // Mantenemos el primer ícono encontrado
             totalAmount: number;
             transactionCount: number;
             userIds: Set<number>;
         }>>();
 
-        // Para el resumen general
-        const summaryMap = new Map<number, {
-            categoryName: string;
-            icon: string;
+        // Para el resumen general (agrupado por nombre de categoría)
+        const summaryMap = new Map<string, {
+            categoryId: number; // Mantenemos el primer ID encontrado
+            icon: string;      // Mantenemos el primer ícono encontrado
             totalAmount: number;
             transactionCount: number;
             userIds: Set<number>;
@@ -213,26 +216,26 @@ export class GraficAdminService {
             // Parsear la fecha string usando formato ISO
             const transactionDate = new Date(transaction.date);
             const period = format(transactionDate, 'YYYY-MM');
-            const categoryId = transaction.category.id;
+            const categoryName = transaction.category.name || 'Sin nombre';
             const amount = Number(transaction.amount);
             const userId = transaction.category.user.id;
             
             grandTotal += amount;
 
-            // Para la tendencia por período
+            // Para la tendencia por período (agrupado por nombre de categoría)
             if (!trendMap.has(period)) {
                 trendMap.set(period, new Map());
             }
             
             const periodMap = trendMap.get(period)!;
-            if (periodMap.has(categoryId)) {
-                const existing = periodMap.get(categoryId)!;
+            if (periodMap.has(categoryName)) {
+                const existing = periodMap.get(categoryName)!;
                 existing.totalAmount += amount;
                 existing.transactionCount += 1;
                 existing.userIds.add(userId);
             } else {
-                periodMap.set(categoryId, {
-                    categoryName: transaction.category.name || 'Sin nombre',
+                periodMap.set(categoryName, {
+                    categoryId: transaction.category.id, // Primer ID encontrado
                     icon: transaction.category.icon || '💰',
                     totalAmount: amount,
                     transactionCount: 1,
@@ -240,15 +243,15 @@ export class GraficAdminService {
                 });
             }
 
-            // Para el resumen general
-            if (summaryMap.has(categoryId)) {
-                const existing = summaryMap.get(categoryId)!;
+            // Para el resumen general (agrupado por nombre de categoría)
+            if (summaryMap.has(categoryName)) {
+                const existing = summaryMap.get(categoryName)!;
                 existing.totalAmount += amount;
                 existing.transactionCount += 1;
                 existing.userIds.add(userId);
             } else {
-                summaryMap.set(categoryId, {
-                    categoryName: transaction.category.name || 'Sin nombre',
+                summaryMap.set(categoryName, {
+                    categoryId: transaction.category.id, // Primer ID encontrado
                     icon: transaction.category.icon || '💰',
                     totalAmount: amount,
                     transactionCount: 1,
@@ -260,11 +263,11 @@ export class GraficAdminService {
         // Convertir tendencia a array
         const trendData: TrendData[] = [];
         trendMap.forEach((categoryMap, period) => {
-            categoryMap.forEach((data, categoryId) => {
+            categoryMap.forEach((data, categoryName) => {
                 trendData.push({
                     period,
-                    categoryId,
-                    categoryName: data.categoryName,
+                    categoryId: data.categoryId,
+                    categoryName: categoryName,
                     icon: data.icon,
                     totalAmount: data.totalAmount,
                     transactionCount: data.transactionCount,
@@ -283,9 +286,9 @@ export class GraficAdminService {
 
         // Convertir resumen a array con porcentajes
         const summary: CategoryExpenseDistribution[] = Array.from(summaryMap.entries())
-            .map(([categoryId, data]) => ({
-                categoryId,
-                categoryName: data.categoryName,
+            .map(([categoryName, data]) => ({
+                categoryId: data.categoryId,
+                categoryName: categoryName,
                 icon: data.icon,
                 totalAmount: data.totalAmount,
                 transactionCount: data.transactionCount,
