@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-type-assertion */
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/config/prisma/prisma.service';
-import { format, addMonth, monthStart, monthEnd } from '@formkit/tempo';
+import { format, monthStart, monthEnd } from '@formkit/tempo';
 import { log } from 'console';
 
 interface CategoryExpenseDistribution {
@@ -303,31 +303,5 @@ export class GraficAdminService {
         };
     }
 
-    /**
-     * Método auxiliar para obtener los meses entre dos fechas usando tempo
-     * @param startYear - Año inicial
-     * @param startMonth - Mes inicial
-     * @param endYear - Año final  
-     * @param endMonth - Mes final
-     * @returns Array de períodos en formato "YYYY-MM"
-     */
-    private getMonthsBetweenDates(
-        startYear: number, 
-        startMonth: number, 
-        endYear: number, 
-        endMonth: number
-    ): string[] {
-        const periods: string[] = [];
-        
-        // Crear fecha inicial
-        let currentDate = new Date(startYear, startMonth - 1, 1);
-        const endDate = new Date(endYear, endMonth - 1, 1);
-
-        while (currentDate <= endDate) {
-            periods.push(format(currentDate, 'YYYY-MM'));
-            currentDate = addMonth(currentDate, 1);
-        }
-
-        return periods;
-    }
+ 
 }
