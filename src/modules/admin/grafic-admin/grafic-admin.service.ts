@@ -4,6 +4,15 @@ import { PrismaService } from 'src/config/prisma/prisma.service';
 import { format, monthStart, monthEnd } from '@formkit/tempo';
 import { log } from 'console';
 
+export interface apiResponse<T> {
+    message: string;
+    error: boolean;
+    statusCode?: number;
+    data?: T;
+
+  }
+  
+
 interface CategoryExpenseDistribution {
   categoryId: number;
   categoryName: string;
@@ -37,7 +46,7 @@ export class GraficAdminService {
     async getExpenseDistributionByMonth(
         month: number, 
         year: number
-    ): Promise<CategoryExpenseDistribution[]> {
+    ): Promise<apiResponse<CategoryExpenseDistribution[]>> {
         // Validar parámetros
         if (month < 1 || month > 12) {
             throw new Error('El mes debe estar entre 1 y 12');
@@ -128,7 +137,11 @@ export class GraficAdminService {
             }))
             .sort((a, b) => b.totalAmount - a.totalAmount); // Ordenar por monto descendente
 
-        return result;
+        return {
+            message: 'Distribución de gastos por categoría',
+            error: false,
+            data: result
+        };
     }
 
     /**
@@ -144,10 +157,10 @@ export class GraficAdminService {
         startYear: number,
         endMonth: number,
         endYear: number
-    ): Promise<{
+    ): Promise<apiResponse<{
         trendData: TrendData[];
         summary: CategoryExpenseDistribution[];
-    }> {
+    }>> {
         // Validar parámetros
         if (startMonth < 1 || startMonth > 12 || endMonth < 1 || endMonth > 12) {
             throw new Error('Los meses deben estar entre 1 y 12');
@@ -298,8 +311,12 @@ export class GraficAdminService {
             .sort((a, b) => b.totalAmount - a.totalAmount);
 
         return {
-            trendData,
-            summary
+            message: 'Tendencia de gastos por categoría',
+            error: false,
+            data: {
+                trendData,
+                summary
+            }
         };
     }
 

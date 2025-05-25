@@ -1,5 +1,5 @@
 import { Controller, Get, Param, ParseIntPipe } from '@nestjs/common';
-import { GraficAdminService } from './grafic-admin.service';
+import { apiResponse, GraficAdminService } from './grafic-admin.service';
 import { Public } from 'src/guards/token.guard';
 interface CategoryExpenseDistribution {
   categoryId: number;
@@ -32,7 +32,7 @@ export class GraficAdminController {
   async getExpenseDistributionByMonth(
       @Param('month', ParseIntPipe) month: number,
       @Param('year', ParseIntPipe) year: number
-  ): Promise<CategoryExpenseDistribution[]> {
+  ): Promise<apiResponse<CategoryExpenseDistribution[]>> {
       return this.graficAdminService.getExpenseDistributionByMonth(month, year);
   }
 
@@ -42,7 +42,7 @@ export class GraficAdminController {
       @Param('startYear', ParseIntPipe) startYear: number,
       @Param('endMonth', ParseIntPipe) endMonth: number,
       @Param('endYear', ParseIntPipe) endYear: number
-  ): Promise<{ trendData: TrendData[]; summary: CategoryExpenseDistribution[] }> {
+  ): Promise<apiResponse<{ trendData: TrendData[]; summary: CategoryExpenseDistribution[] }>> {
       return this.graficAdminService.getExpenseDistributionTrend(startMonth, startYear, endMonth, endYear);
   }
 }
