@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { TransactionService } from './transaction.service';
 import { TransactionDTO } from 'src/models/trasaction.interface';
+import { Public } from 'src/guards/token.guard';
 interface MonthlyExpenseRequest {
   userId: number;
   month: number;
@@ -94,6 +95,42 @@ export class TransactionController {
   async getTransactionByCategoryId(@Param('categoryId') categoryId: string) {
     return await this.transactionService.getTransactionByCategoryId(
       Number(categoryId),
+    );
+  }
+
+  @Public()
+  @Get('statistics')
+  async getTransactionStatistics(
+    @Query('month') month: number,
+    @Query('year') year: number,
+    @Query('endMonth') endMonth?: number,
+    @Query('endYear') endYear?: number
+  ) {
+    // Validar que se proporcione mes y año
+    if (!month || !year) {
+      throw new Error('Debe proporcionar al menos el mes y el año');
+    }
+
+    // Convertir parámetros a números
+    const monthNum = month;
+    const yearNum = year;
+    
+    // Convertir parámetros opcionales
+    let endMonthNum: number | undefined;
+    let endYearNum: number | undefined;
+    
+    if (endMonth && endYear) {
+      endMonthNum = endMonth;
+      endYearNum = endYear;
+    } else if (endMonth || endYear) {
+      throw new Error('Debe proporcionar tanto el mes final como el año final');
+    }
+
+    return await this.transactionService.getTransactionStatistics(
+      monthNum,
+      yearNum,
+      endMonthNum,
+      endYearNum
     );
   }
 }

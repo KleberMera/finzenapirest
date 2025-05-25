@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { format } from '@formkit/tempo';
 import { Injectable } from '@nestjs/common';
 import { log } from 'console';
@@ -287,6 +288,204 @@ export class TransactionService {
     };
   }
 
+  /**
+   * Obtiene estadísticas generales de transacciones
+   * @param month Mes inicial (1-12)
+   * @param year Año inicial (ej: 2024)
+   * @param endMonth Mes final (opcional, 1-12)
+   * @param endYear Año final (opcional, ej: 2024)
+   * @returns Estadísticas de transacciones por período y totales
+   */
+  async getTransactionStatistics(
+    month: number,
+    year: number,
+    endMonth?: number,
+    endYear?: number
+  ) {
+    // Validar mes y año inicial
+    if (month < 1 || month > 12) {
+      throw new Error('El mes debe estar entre 1 y 12');
+    }
+    
+    // Determinar si es un rango de meses o solo un mes
+    const isRange = endMonth !== undefined && endYear !== undefined;
+    
+    if (isRange) {
+      // Validar mes y año final
+      if (endMonth < 1 || endMonth > 12) {
+        throw new Error('El mes final debe estar entre 1 y 12');
+      }
+      
+      // Validar que la fecha final sea mayor o igual a la inicial
+      const startDate = new Date(year, month - 1, 1);
+      const endDate = new Date(endYear, endMonth, 0);
+      
+      if (endDate < startDate) {
+        throw new Error('La fecha final debe ser mayor o igual a la fecha inicial');
+      }
+    }
 
+    // Obtener todos los meses en el rango
+    const periods: { month: number; year: number }[] = [];
+    
+    if (isRange) {
+      // Generar lista de meses en el rango
+      let currentDate = new Date(year, month - 1, 1);
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+      const lastDate = new Date(endYear as number, endMonth as number, 0);
+      
+      while (currentDate <= lastDate) {
+        periods.push({
+          month: currentDate.getMonth() + 1,
+          year: currentDate.getFullYear()
+        });
+        
+        // Mover al primer día del siguiente mes
+        currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
+      }
+    } else {
+      // Solo un mes
+      periods.push({ month, year });
+    }
+
+    // Definir el tipo para las transacciones con categoría
+    type TransactionWithCategory = {
+      amount: { toNumber: () => number };
+      receiptImageS3Key: string | null;
+      category: { type: 'Ingreso' | 'Gasto'; name: string; id: number; icon: string | null };
+    };
+
+    // Obtener estadísticas para cada período
+    const periodStats = [];
+    const allTransactions: TransactionWithCategory[] = [];
+    
+    for (const period of periods) {
+      const firstDay = new Date(period.year, period.month - 1, 1);
+      const lastDay = new Date(period.year, period.month, 0);
+      
+      const startDate = format({ date: firstDay, format: 'YYYY-MM-DD' });
+      const endDate = format({ date: lastDay, format: 'YYYY-MM-DD' });
+      
+      // Obtener transacciones del período actual
+      const transactions = await this.prismaService.transaction.findMany({
+        where: {
+          date: {
+            gte: startDate,
+            lte: endDate,
+          },
+        },
+        include: {
+          category: {
+            select: {
+              id: true,
+              name: true,
+              type: true,
+              icon: true,
+            },
+          },
+        },
+      }) as unknown as TransactionWithCategory[];
+      
+      allTransactions.push(...transactions);
+      
+      // Calcular estadísticas del período
+      const periodData = this.calculatePeriodStats(transactions, period.month, period.year);
+      periodStats.push(periodData);
+    }
+    
+    // Calcular totales generales
+    const totalData = this.calculatePeriodStats(allTransactions);
+    
+    return {
+      message: 'Estadísticas de transacciones obtenidas con éxito',
+      data: {
+        periods: periodStats,
+        total: totalData,
+      },
+    };
+  }
   
+  /**
+   * Calcula las estadísticas para un conjunto de transacciones
+   */
+  private calculatePeriodStats(
+    transactions: Array<{
+      amount: { toNumber: () => number };
+      receiptImageS3Key: string | null;
+      category: { type: 'Ingreso' | 'Gasto'; name: string; id: number; icon: string | null };
+    }>,
+    month?: number,
+    year?: number
+  ) {
+    // Inicializar contadores
+    let totalIncome = 0;
+    let totalExpense = 0;
+    let transactionsWithReceipt = 0;
+    const transactionsByCategory: Record<string, { amount: number; type: 'Ingreso' | 'Gasto' }> = {};
+    
+    // Procesar cada transacción
+    transactions.forEach(transaction => {
+      const amount = transaction.amount.toNumber();
+      const isIncome = transaction.category.type === 'Ingreso';
+      
+      // Sumar a ingresos o gastos
+      if (isIncome) {
+        totalIncome += amount;
+      } else {
+        totalExpense += amount;
+      }
+      
+      // Contar transacciones con imagen de recibo
+      if (transaction.receiptImageS3Key) {
+        transactionsWithReceipt++;
+      }
+      
+      // Agrupar por categoría
+      const categoryName = transaction.category.name;
+      if (!transactionsByCategory[categoryName]) {
+        transactionsByCategory[categoryName] = { 
+          amount: 0, 
+          type: transaction.category.type 
+        };
+      }
+      transactionsByCategory[categoryName].amount += amount;
+    });
+    
+    // Preparar estadísticas por categoría
+    const categories = Object.entries(transactionsByCategory).map(([name, data]) => ({
+      name,
+      type: data.type,
+      totalAmount: data.amount,
+      percentage: (data.amount / (totalIncome + totalExpense)) * 100,
+    }));
+    
+    // Separar categorías por tipo
+    const incomeCategories = categories.filter(cat => cat.type === 'Ingreso')
+      .sort((a, b) => b.totalAmount - a.totalAmount);
+    const expenseCategories = categories.filter(cat => cat.type === 'Gasto')
+      .sort((a, b) => b.totalAmount - a.totalAmount);
+    
+    //Calcular el numero de transacciones por tipo
+    const incomeTransactions = transactions.filter(cat => cat.category.type === 'Ingreso').length;
+    const expenseTransactions = transactions.filter(cat => cat.category.type === 'Gasto').length;
+    
+    
+    return {
+      period: month && year ? `${month.toString().padStart(2, '0')}/${year}` : 'Total',
+      totalTransactions: transactions.length,
+      income: {
+        total: totalIncome,
+        //categories: incomeCategories,
+        transactions: incomeTransactions,
+      },
+      expense: {
+        total: totalExpense,
+        //categories: expenseCategories,
+        transactions: expenseTransactions,
+      },
+      balance: totalIncome - totalExpense,
+      transactionsWithReceipt,
+      transactionsWithoutReceipt: transactions.length - transactionsWithReceipt,
+    };
+  }
 }
