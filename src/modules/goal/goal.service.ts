@@ -54,12 +54,28 @@ export class GoalService {
   async getGoalByUserId(userId: number) {
     const goals = await this.prismaService.goal.findMany({
       where: {
-        user_id: userId,
+        user_id: Number(userId),
       },
     });
     return {
       message: 'Metas cargadas con éxito',
       data: goals,
+    };
+  }
+
+  //Obetner seguimientos de meta por id de usuario y id de meta
+  async getGoalTrackingByUserIdAndGoalId(userId: number, goalId: number) {
+    const goalContributions = await this.prismaService.goalContribution.findMany({
+      where: {
+        goal_id: goalId,
+        goal: {
+          user_id: userId,
+        },
+      },
+    });
+    return {
+      message: 'Seguimientos de meta cargados con éxito',
+      data: goalContributions,
     };
   }
 }

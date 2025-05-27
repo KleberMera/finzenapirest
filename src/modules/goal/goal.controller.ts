@@ -1,7 +1,8 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { GoalService } from './goal.service';
 import { GoalContributionDTO, GoalDTO } from 'src/models/meta';
-
+import { Public } from 'src/guards/token.guard';
+@Public()
 @Controller('goal')
 export class GoalController {
   constructor(private readonly goalService: GoalService) {}
@@ -19,8 +20,19 @@ export class GoalController {
   }
 
   // Obtener todos los metas de un usuario
-  @Post('user/:userId')
-  async getGoalByUserId(userId: number) {
-    return await this.goalService.getGoalByUserId(userId);
+  @Get('user/:userId')
+  async getGoalByUserId(@Param('userId') userId: number) {
+    return await this.goalService.getGoalByUserId(Number(userId));
+  }
+
+  @Get('contribution/user/:userId/:goalId')
+  async getGoalTrackingByUserIdAndGoalId(
+    @Param('userId') userId: number,
+    @Param('goalId') goalId: number,
+  ) {
+    return await this.goalService.getGoalTrackingByUserIdAndGoalId(
+      Number(userId),
+      Number(goalId),
+    );
   }
 }
