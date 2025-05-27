@@ -28,24 +28,35 @@ export class GoalService {
   }
 
   //Crear Seguimiento de meta por id de usuario y id de meta
-  async createGoalTracking(goalContribution: GoalContributionDTO) {
+  async createGoalTracking(goalContribution: GoalContributionDTO, goalId: number) {
     try {
-      const newGoalContribution =
-        await this.prismaService.goalContribution.create({
-          data: {
-            ...goalContribution,
-          },
+       
+        const goalExists = await this.prismaService.goal.findUnique({
+            where: {
+                id: goalId,
+            },
         });
-      return {
-        message: 'Seguimiento de meta creado con éxito',
-        data: newGoalContribution,
-      };
+        if (!goalExists) {
+            throw new Error('Meta no encontrada');
+        }
+        const newGoalContribution = await this.prismaService.goalContribution.create({
+            data: {
+                ...goalContribution,
+                goal_id: goalId,
+               
+            },
+        });
+        return {
+            message: 'Aporte guardado exitosamente',
+            data: newGoalContribution,
+        };
+      
     } catch (error) {
       if (error instanceof Error) {
         throw error;
       }
       throw new Error(
-        `Error al crear el seguimiento de meta: ${error.message}`,
+        `Error al crear el aporte a meta: ${error.message}`,
       );
     }
   }
@@ -74,7 +85,7 @@ export class GoalService {
       },
     });
     return {
-      message: 'Seguimientos de meta cargados con éxito',
+      message: 'Aportes a meta cargados con éxito',
       data: goalContributions,
     };
   }

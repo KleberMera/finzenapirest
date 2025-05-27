@@ -14,9 +14,9 @@ export class GoalController {
   }
 
   //Crear Seguimiento de meta por id de usuario y id de meta
-  @Post('contribution')
-  async createGoalTracking(@Body() goalTracking: GoalContributionDTO) {
-    return await this.goalService.createGoalTracking(goalTracking);
+  @Post('contribution/:goalId')
+  async createGoalTracking(@Body() goalTracking: GoalContributionDTO, @Param('goalId') goalId: number) {
+    return await this.goalService.createGoalTracking(goalTracking, Number(goalId));
   }
 
   // Obtener todos los metas de un usuario

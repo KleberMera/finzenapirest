@@ -12,7 +12,7 @@ export interface GoalDTO {
 
 
 export interface GoalContributionDTO {
-    goal_id: number;
+    goal_id?: number;
     amount: number;
     note?: string;
     date: string;
