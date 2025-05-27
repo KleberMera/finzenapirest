@@ -153,17 +153,17 @@ export class UserService {
       });
   
       // 6. Eliminar metas y sus seguimientos
-      const metas = await this.prismaService.meta.findMany({
+      const metas = await this.prismaService.goal.findMany({
         where: { user_id: id }
       });
       
       for (const meta of metas) {
-        await this.prismaService.metaTracking.deleteMany({
-          where: { meta_id: meta.id }
+        await this.prismaService.goalContribution.deleteMany({
+          where: { goal_id: meta.id }
         });
       }
       
-      await this.prismaService.meta.deleteMany({
+      await this.prismaService.goal.deleteMany({
         where: { user_id: id }
       });
   

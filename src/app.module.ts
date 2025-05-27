@@ -13,7 +13,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { ScheduleModule } from '@nestjs/schedule';
 import { BalanceModule } from './modules/balance/balance.module';
 import { TicketsModule } from './modules/tickets/tickets.module';
-import { MetaModule } from './modules/meta/meta.module';
+import { GoalModule } from './modules/goal/goal.module';
 import { GraficModule } from './modules/grafic/grafic.module';
 import { DeviceModule } from './modules/device/device.module';
 import { SalaryModule } from './modules/salary/salary.module';
@@ -43,7 +43,7 @@ import { GraficAdminModule } from './modules/admin/grafic-admin/grafic-admin.mod
     NotificationsModule,
     BalanceModule,
     TicketsModule,
-    MetaModule,
+    GoalModule,
     GraficModule,
     DeviceModule,
     SalaryModule,
