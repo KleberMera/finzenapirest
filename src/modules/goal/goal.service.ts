@@ -201,101 +201,25 @@ export class GoalService {
 
 
 
-  /////////
-
-  // async getGoalProgress(userId: number, goalId: number): Promise<GoalProgressResponse> {
-  //   // Obtener la meta con sus contribuciones
-  //   const goal = await this.prismaService.goal.findFirst({
-  //     where: {
-  //       id: goalId,
-  //       user_id: userId,
-  //     },
-  //     include: {
-  //       contributions: {
-  //         orderBy: {
-  //           date: 'desc'
-  //         }
-  //       }
-  //     }
-  //   });
-
-  //   if (!goal) {
-  //     throw new Error('Meta no encontrada');
-  //   }
-
-  //   // Calcular el monto total de contribuciones
-  //   const currentAmount = goal.contributions.reduce((total, contribution) => {
-  //     return total + Number(contribution.amount);
-  //   }, 0);
-
-  //   const targetAmount = Number(goal.target_amount);
-  //   const progressPercentage = targetAmount > 0 ? (currentAmount / targetAmount) * 100 : 0;
-  //   const remainingAmount = Math.max(0, targetAmount - currentAmount);
-
-  //   // Calcular progreso temporal
-  //   const today = format(new Date(), 'YYYY-MM-DD', 'es');
-  //   let daysTotal = 0;
-  //   let daysElapsed = 0;
-  //   let daysRemaining = 0;
-  //   let timeProgressPercentage = 0;
-
-  //   if (goal.start_date && goal.deadline) {
-  //     const startDate = format(goal.start_date, 'YYYY-MM-DD', 'es');
-  //     const endDate = format(goal.deadline, 'YYYY-MM-DD', 'es');
-      
-  //     daysTotal = diffDays(startDate, endDate);
-  //     daysElapsed = diffDays(startDate, today);
-  //     daysRemaining = Math.max(0, diffDays(today, endDate));
-      
-  //     if (daysTotal > 0) {
-  //       timeProgressPercentage = Math.min(100, (daysElapsed / daysTotal) * 100);
-  //     }
-  //   }
-
-  //   // Determinar si está en el camino correcto
-  //   const isOnTrack = timeProgressPercentage > 0 ? 
-  //     progressPercentage >= timeProgressPercentage : 
-  //     progressPercentage > 0;
-
-  //   // Calcular estadísticas adicionales
-  //   const contributionsCount = goal.contributions.length;
-  //   const lastContributionDate = goal.contributions.length > 0 ? 
-  //     goal.contributions[0].date : null;
-
-  //   // Calcular promedio mensual de contribuciones
-  //   let averageMonthlyContribution = 0;
-  //   if (goal.start_date && contributionsCount > 0) {
-  //     const startDate = format(goal.start_date, 'YYYY-MM-DD', 'es');
-  //     const monthsElapsed = Math.max(1, diffMonths(startDate, today));
-  //     averageMonthlyContribution = currentAmount / monthsElapsed;
-  //   }
-
-  //   // Proyectar fecha de finalización basada en el progreso actual
-  //   let projectedCompletionDate: string | null = null;
-  //   if (averageMonthlyContribution > 0 && remainingAmount > 0) {
-  //     const monthsNeeded = remainingAmount / averageMonthlyContribution;
-  //     projectedCompletionDate = addMonth(today, Math.ceil(monthsNeeded)).toString();
-  //   }
-
-  //   return {
-  //     goalId: goal.id,
-  //     goalName: goal.name,
-  //     targetAmount,
-  //     currentAmount,
-  //     progressPercentage: Math.min(100, progressPercentage),
-  //     timeProgressPercentage: Math.min(100, timeProgressPercentage),
-  //     remainingAmount,
-  //     daysTotal,
-  //     daysElapsed: Math.max(0, daysElapsed),
-  //     daysRemaining,
-  //     status: goal.status,
-  //     startDate: goal.start_date,
-  //     deadline: goal.deadline,
-  //     isOnTrack,
-  //     contributionsCount,
-  //     lastContributionDate,
-  //     averageMonthlyContribution,
-  //     projectedCompletionDate
-  //   };
-  // }
+  //Borrar aporte
+  async deleteGoalContribution(goalContributionId: number) {
+    try {
+      const deletedGoalContribution = await this.prismaService.goalContribution.delete({
+        where: {
+          id: goalContributionId,
+        },
+      });
+      return {
+        message: 'Aporte eliminado exitosamente',
+        data: deletedGoalContribution,
+      };
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error(
+        `Error al eliminar el aporte a meta: ${error.message}`,
+      );
+    }
+  }
 }

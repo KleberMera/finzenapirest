@@ -1,8 +1,7 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
 import { GoalService } from './goal.service';
 import { GoalContributionDTO, GoalDTO } from 'src/models/meta';
-import { Public } from 'src/guards/token.guard';
-@Public()
+
 @Controller('goal')
 export class GoalController {
   constructor(private readonly goalService: GoalService) {}
@@ -43,5 +42,11 @@ export class GoalController {
     @Param('goalId') goalId: number,
   ) {
     return await this.goalService.getGoalProgress(Number(userId), Number(goalId));
+  }
+
+
+  @Delete('contribution/:goalContributionId')
+  async deleteGoalContribution(@Param('goalContributionId') goalContributionId: number) {
+    return await this.goalService.deleteGoalContribution(Number(goalContributionId));
   }
 }
