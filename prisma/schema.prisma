@@ -42,7 +42,7 @@ model User {
   updatedAt         DateTime           @updatedAt
   categories        Category[]
   debts             Debt[]
-  metas             Meta[]
+  goals             Goal[]
   devices           Device[]
   verificationCodes VerificationCode[]
   salary_history    SalaryHistory[]
@@ -179,7 +179,7 @@ model RecurringTransaction {
   updatedAt             DateTime    @updatedAt
 }
 
-model Meta {
+model Goal {
   id            Int            @id @default(autoincrement())
   user_id       Int
   user          User           @relation(fields: [user_id], references: [id])
@@ -187,19 +187,21 @@ model Meta {
   description   String?
   target_amount Decimal // Monto objetivo
   deadline      String? // Fecha límite para alcanzar la meta
+  initial_amount Decimal? // Monto inicial
+  start_date    String? // Fecha de inicio
   status        String         @default("Active") // Active, Completed, Cancelled
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
-  trackings     MetaTracking[] // Relación con los seguimientos
+  contributions     GoalContribution[] // Relación con los aportes
 }
 
-model MetaTracking {
+model GoalContribution {
   id        Int      @id @default(autoincrement())
-  meta_id   Int
-  meta      Meta     @relation(fields: [meta_id], references: [id])
+  goal_id   Int
+  goal      Goal     @relation(fields: [goal_id], references: [id], onDelete: Cascade)
   amount    Decimal // Monto aportado en este seguimiento
   note      String? // Nota opcional del aporte (ej: "Primer aporte")
-  date      String
+  date      String  // Fecha de Aporte
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
