@@ -14,9 +14,9 @@ export class GoalController {
   }
 
   //Crear Seguimiento de meta por id de usuario y id de meta
-  @Post('contribution/:goalId')
-  async createGoalTracking(@Body() goalTracking: GoalContributionDTO, @Param('goalId') goalId: number) {
-    return await this.goalService.createGoalTracking(goalTracking, Number(goalId));
+  @Post('contribution/:goalId/:userId')
+  async createGoalTracking(@Body() goalTracking: GoalContributionDTO, @Param('goalId') goalId: number, @Param('userId') userId: number) {
+    return await this.goalService.createGoalTracking(goalTracking, Number(goalId), Number(userId));
   }
 
   // Obtener todos los metas de un usuario
@@ -34,5 +34,14 @@ export class GoalController {
       Number(userId),
       Number(goalId),
     );
+  }
+
+
+  @Get('progress/:userId/:goalId')
+  async getGoalProgress(
+    @Param('userId') userId: number,
+    @Param('goalId') goalId: number,
+  ) {
+    return await this.goalService.getGoalProgress(Number(userId), Number(goalId));
   }
 }

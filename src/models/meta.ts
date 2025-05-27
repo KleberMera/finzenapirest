@@ -4,7 +4,6 @@ export interface GoalDTO {
     description?: string;
     target_amount: number;
     deadline?: string;
-    initial_amount?: number;
     start_date?: string;
     status?: string;
 }

@@ -187,7 +187,6 @@ model Goal {
   description   String?
   target_amount Decimal // Monto objetivo
   deadline      String? // Fecha límite para alcanzar la meta
-  initial_amount Decimal? // Monto inicial
   start_date    String? // Fecha de inicio
   status        String         @default("Active") // Active, Completed, Cancelled
   createdAt     DateTime       @default(now())
