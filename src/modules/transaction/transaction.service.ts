@@ -45,6 +45,25 @@ export class TransactionService {
     };
   }
 
+  //Editar transaccion
+  async updateTransaction(id: number, transaction: TransactionDTO) {
+    try {
+      const updatedTransaction = await this.prismaService.transaction.update({
+        where: { id },
+        data: transaction,
+      });
+      return {
+        message: 'Transacción actualizada con éxito',
+        data: updatedTransaction,
+      };
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error(`Error al actualizar la transacción: ${error.message}`);
+    }
+  }
+
   async createTransaction(transaction: TransactionDTO) {
     try {
       const newTransaction = await this.prismaService.transaction.create({

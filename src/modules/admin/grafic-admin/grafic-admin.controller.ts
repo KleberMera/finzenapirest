@@ -1,6 +1,5 @@
 import { Controller, Get, Param, ParseIntPipe } from '@nestjs/common';
 import { apiResponse, GraficAdminService } from './grafic-admin.service';
-import { Public } from 'src/guards/token.guard';
 interface CategoryExpenseDistribution {
   categoryId: number;
   categoryName: string;
@@ -21,7 +20,6 @@ interface TrendData {
   userCount?: number; // Para admin: cantidad de usuarios que usaron esta categoría en este período
 }
 
-@Public()
 @Controller('grafic-admin')
 export class GraficAdminController {
   constructor(private readonly graficAdminService: GraficAdminService) {}

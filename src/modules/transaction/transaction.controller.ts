@@ -5,11 +5,11 @@ import {
   Get,
   Param,
   Post,
+  Put,
   Query,
 } from '@nestjs/common';
 import { TransactionService } from './transaction.service';
 import { TransactionDTO } from 'src/models/trasaction.interface';
-import { Public } from 'src/guards/token.guard';
 interface MonthlyExpenseRequest {
   userId: number;
   month: number;
@@ -35,6 +35,11 @@ export class TransactionController {
   @Post()
   async createTransaction(@Body() transaction: TransactionDTO) {
     return await this.transactionService.createTransaction(transaction);
+  }
+
+  @Put(':id')
+  async updateTransaction(@Param('id') id: number, @Body() transaction: TransactionDTO) {
+    return await this.transactionService.updateTransaction(Number(id), transaction);
   }
 
   @Delete('user/delete/:id')
@@ -98,7 +103,7 @@ export class TransactionController {
     );
   }
 
-  @Public()
+
   @Get('statistics')
   async getTransactionStatistics(
     @Query('month') month: number,

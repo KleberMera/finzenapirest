@@ -9,9 +9,7 @@ import {
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { UserDTO2 } from 'src/models/user.interface';
-import { Public } from 'src/guards/token.guard';
 
-@Public()
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
