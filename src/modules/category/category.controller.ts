@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
 import { CategoryService } from './category.service';
 import { CategoryDTO } from 'src/models/category.interface';
 
@@ -40,6 +40,12 @@ export class CategoryController {
   @Get('user/type/:userId/:type')
   async getCategoriesByType(@Param('userId') userId: string, @Param('type') type: string) {
     return await this.categoryService.getCategoriesByUserIde(Number(userId), type);
+  }
+
+
+  @Put(':id')
+  async updateCategory(@Param('id') id: number, @Body() category: CategoryDTO) {
+    return await this.categoryService.updateCategory(Number(id), category);
   }
 
 

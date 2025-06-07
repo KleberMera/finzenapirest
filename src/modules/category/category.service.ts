@@ -159,4 +159,38 @@ export class CategoryService {
         throw new Error(`Error al cargar las categorías: ${error.message}`);
       }
     }
+
+
+    //Editar categoria
+    async updateCategory(id: number, category: CategoryDTO) {
+      try {
+
+        const existingCategory = await this.prismaService.category.findFirst({
+          where: {
+            AND: [
+              { name: { equals: category.name, mode: 'insensitive' } },
+              { user_id: category.user_id }
+            ],
+          },
+        });
+  
+        if (existingCategory) {
+          throw new BadRequestException('Ya tienes una categoría con este nombre');
+        }
+  
+        const updatedCategory = await this.prismaService.category.update({
+          where: { id },
+          data: category,
+        });
+        return {
+          message: 'Categoría actualizada con éxito',
+          data: updatedCategory,
+        };
+      } catch (error) {
+        if (error instanceof Error) {
+          throw error;
+        }
+        throw new Error(`Error al actualizar la categoría: ${error.message}`);
+      }
+    }
 }
