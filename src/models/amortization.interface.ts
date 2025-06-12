@@ -8,5 +8,7 @@ export interface AmortizationDTO {
   interest: Decimal;
   amortized: Decimal;
   outstanding: Decimal;
+  payment_date: string;
   status: string;
+
 }

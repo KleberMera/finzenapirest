@@ -25,7 +25,7 @@ export interface DebtDTO {
   amortizations: AmortizationDTO;
 }
 
-export class UpdateStatusDto {
+export class UpdateAllStatusDto {
   @IsNotEmpty()
   @IsArray()
   @IsNumber({}, { each: true })
@@ -34,6 +34,10 @@ export class UpdateStatusDto {
   @IsNotEmpty()
   @IsString()
   status: string;
+
+  @IsNotEmpty()
+  @IsString()
+  payment_date: string;
 }
 
 // Ya teníamos este DTO de antes
@@ -49,4 +53,19 @@ export class UpdateDebtAmortizationsDto {
   @IsNotEmpty()
   @IsString()
   status: string;
+}
+
+
+export class UpdateStatusDto {
+  @IsNotEmpty()
+  @IsNumber()
+  id: number;
+
+  @IsNotEmpty()
+  @IsString()
+  status: string;
+
+  @IsNotEmpty()
+  @IsString()
+  payment_date: string;
 }

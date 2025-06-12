@@ -130,6 +130,7 @@ model Amortization {
   interest      Decimal?
   amortized     Decimal?
   outstanding   Decimal?
+  payment_date  String?
   status        String?  @default("Pendiente")
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { DebtDTO, UpdateDebtAmortizationsDto, UpdateStatusDto } from 'src/models/deb.interface';
+import { DebtDTO, UpdateAllStatusDto, UpdateDebtAmortizationsDto, UpdateStatusDto } from 'src/models/deb.interface';
 
 import { PrismaService } from 'src/config/prisma/prisma.service';
 
@@ -93,7 +93,7 @@ export class DebtService {
     }
   }
 
-  async updateStatus(debtId: number, updateDto: UpdateStatusDto) {
+  async updateAllStatus(debtId: number, updateDto: UpdateAllStatusDto) {
     // Verificar si la deuda existe
     const debt = await this.prismaService.debt.findUnique({
       where: { id: debtId },
@@ -125,6 +125,7 @@ export class DebtService {
       },
       data: {
         status: updateDto.status,
+        payment_date: updateDto.payment_date,
         updatedAt: new Date()
       }
     });
@@ -164,6 +165,55 @@ export class DebtService {
     };
   }
 
+
+  //Actualizar solo un status de una amortizacion
+  async updateStatus(debtId: number, updateStatusDto: UpdateStatusDto) {
+    const debt = await this.prismaService.debt.findUnique({
+      where: { id: debtId },
+      include: {
+        amortizations: true
+      }
+    });
+
+    if (!debt) {
+      throw new NotFoundException(`Deuda con ID ${debtId} no encontrada`);
+    }
+
+    const updatedDebt = await this.prismaService.amortization.updateMany({
+      where: {  AND: [
+        { debt_id: debtId },
+        { id: updateStatusDto.id }
+      ] },
+      data: {
+        status: updateStatusDto.status,
+        payment_date: updateStatusDto.payment_date,
+        updatedAt: new Date()
+      }
+    });
+
+        // Verificar si todas las amortizaciones están pagadas
+        const allAmortizations = await this.prismaService.amortization.findMany({
+          where: { debt_id: debtId }
+        });
+    
+        const allPaid = allAmortizations.every(am => am.status === 'Pagado');
+    
+        if (allPaid) {
+          await this.prismaService.debt.update({
+            where: { id: debtId },
+            data: {
+              status: 'Pagado',
+              updatedAt: new Date()
+            }
+          });
+        }
+
+    return {
+      message: 'Pago actualizado con éxito',
+      data: updatedDebt
+    };
+
+  }
 
 
 

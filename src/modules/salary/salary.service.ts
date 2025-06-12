@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { log } from 'console';
 import { Salary } from 'src/models/salary';
 import { PrismaService } from 'src/config/prisma/prisma.service';
+import { format } from '@formkit/tempo';
 
 @Injectable()
 export class SalaryService {
@@ -16,7 +17,7 @@ export class SalaryService {
       where: { user_id: userId },
     });
     return {
-      message: 'Salaries retrieved successfully',
+      message: 'Salarios obtenidos correctamente',
       data: salaries,
       status: 200,
     };
@@ -34,7 +35,7 @@ export class SalaryService {
        }
     });
     return {
-      message: 'Salary created successfully',
+      message: 'Salario creado correctamente',
       data: salary,
       status: 201,
     };
@@ -52,7 +53,7 @@ export class SalaryService {
       },
     });
     return {
-      message: 'Salary updated successfully',
+      message: 'Salario actualizado correctamente',
       data: salary,
       status: 200,
     };
@@ -67,7 +68,7 @@ export class SalaryService {
       where: { id },
     });
     return {
-      message: 'Salary deleted successfully',
+      message: 'Salario eliminado correctamente',
       data: null,
       status: 200,
     };
@@ -90,10 +91,115 @@ export class SalaryService {
         createdAt: 'desc', // Ordenar por effective_date descendente
       },
     });
+
+    
+    
   
     return {
-      message: 'Salary retrieved successfully',
+      message: 'Salario obtenido correctamente',
       data: salary,
+      status: 200,
+    };
+  }
+
+
+
+
+  async getSalaryByMonthDetail(userId: number, monthName?: string, year?: number, month?: number) {
+    const currentMonth =
+      monthName || new Date().toLocaleString('default', { month: 'long' });
+  
+    const salary = await this.prisma.salaryHistory.findFirst({
+      where: {
+        user_id: userId,
+        month_name: currentMonth,
+      },
+      orderBy: {
+        createdAt: 'desc', // Ordenar por effective_date descendente
+      },
+    });
+
+    
+    const transactions = await this.prisma.transaction.findMany({
+      where: {
+        category: {
+          user_id: userId, // Filtra por el usuario
+        },
+        date: {
+          gte: format({ date: new Date(year, month - 1, 1), format: 'YYYY-MM-DD' }), // Inicio del mes
+          lt: format({ date: new Date(year, month, 1), format: 'YYYY-MM-DD' }), // Inicio del siguiente mes
+        },
+      },
+      include: {
+        category: true,
+      },
+    });
+
+    // Consulta modificada para obtener solo el total de amortizaciones del mes
+    const amortizationsResult = await this.prisma.amortization.aggregate({
+      _sum: {
+        quota: true, // Suma el campo quota (o cambia por el campo que represente el monto de la amortización)
+      },
+      where: {
+        debt: {
+          user_id: userId, // Filtra por el usuario
+        },
+        payment_date: {
+          gte: format({ date: new Date(year, month - 1, 1), format: 'YYYY-MM-DD' }), // Inicio del mes
+          lt: format({ date: new Date(year, month, 1), format: 'YYYY-MM-DD' }), // Inicio del siguiente mes
+        },
+        status: 'Pagado', // Solo amortizaciones pagadas
+      },
+    });
+
+    const goalContribution = await this.prisma.goalContribution.aggregate({
+      _sum: {
+        amount: true,
+      },
+      where: {
+        goal: {
+          user_id: userId,
+        },
+        date: {
+          gte: format({ date: new Date(year, month - 1, 1), format: 'YYYY-MM-DD' }), // Inicio del mes
+          lt: format({ date: new Date(year, month, 1), format: 'YYYY-MM-DD' }), // Inicio del siguiente mes
+        },
+      
+      },
+    });
+
+    // Extraer el total de amortizaciones
+    const totalDebtPaid = amortizationsResult._sum.quota?.toNumber() || 0;
+
+    // Extraer el total de contribuciones
+    const totalGoalContributionPaid = goalContribution._sum.amount?.toNumber() || 0;
+
+    //total ingresos
+    const totalIncome = transactions.filter(t => t.category.type === 'Ingreso').reduce((acc, t) => acc + t.amount.toNumber(), 0);
+
+    //total gastos
+    const totalExpense = transactions.filter(t => t.category.type === 'Gasto').reduce((acc, t) => acc + t.amount.toNumber(), 0);
+
+   const remainingSalary = salary.salary_amount.toNumber() + totalIncome - totalExpense - totalDebtPaid - totalGoalContributionPaid;
+
+    return {
+      message: 'Salario obtenido correctamente',
+      data: {
+        //total con salario
+        salary,
+        //total ingresos
+        totalIncome,
+        //total gastos
+        totalExpense,
+
+        //total de deudas pagadas
+        totalDebtPaid, 
+        //total de contribuciones pagadas
+        totalGoalContributionPaid,
+        //saldo restante
+        remainingSalary,
+
+      },
       status: 200,
     };
   }

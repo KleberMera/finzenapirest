@@ -1,7 +1,10 @@
 import { Body, Controller, Param, Post } from '@nestjs/common';
 import { FinanceService } from './finance.service';
+import { Public } from 'src/guards/token.guard';
 
+@Public()
 @Controller('finance')
+
 export class FinanceController {
   constructor(private readonly financeService: FinanceService) {}
 

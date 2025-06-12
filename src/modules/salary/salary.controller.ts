@@ -10,7 +10,9 @@ import {
 } from '@nestjs/common';
 import { SalaryService } from './salary.service';
 import { Salary } from 'src/models/salary';
+import { Public } from 'src/guards/token.guard';
 
+@Public()
 @Controller('salary')
 export class SalaryController {
   constructor(private readonly salaryService: SalaryService) {}
@@ -45,5 +47,20 @@ async getSalaryByMonth(
 ) {
   const parsedUserId = parseInt(userId, 10);
   return this.salaryService.getSalaryByMonth(parsedUserId, month);
+}
+
+@Get('user/:userId/month/detail')
+async getSalaryByMonthDetail(
+  @Param('userId') userId: number,
+  @Query('month') month?: number,
+  @Query('year') year?: number,
+  @Query('monthName') monthName?: string,
+) {
+  
+  return this.salaryService.getSalaryByMonthDetail(
+    Number(userId), 
+    monthName, 
+    Number(year), 
+    Number(month));
 }
 }

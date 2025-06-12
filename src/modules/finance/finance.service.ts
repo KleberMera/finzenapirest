@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-base-to-string */
 import { format } from '@formkit/tempo';
 import { Injectable } from '@nestjs/common';
 import { log } from 'console';
@@ -19,10 +20,10 @@ export class FinanceService {
       orderBy: { effective_date: 'desc' },
     });
   
-    // 2. Obtener transacciones de ingresos del mes con categorías
-    const incomeTransactions = await this.prisma.transaction.findMany({
+    // 2. Obtener TODAS las transacciones del mes en una sola consulta
+    const allTransactions = await this.prisma.transaction.findMany({
       where: {
-        category: { user_id: userId, type: 'Ingreso' },
+        category: { user_id: userId },
         date: {
           gte: format({
             date: new Date(year, month - 1, 1),
@@ -36,24 +37,48 @@ export class FinanceService {
       },
     });
   
-    // 3. Obtener transacciones de gastos del mes con categorías
-    const expenseTransactions = await this.prisma.transaction.findMany({
+    // 3. Separar transacciones por tipo
+    const incomeTransactions = allTransactions.filter(tx => tx.category.type === 'Ingreso');
+    const expenseTransactions = allTransactions.filter(tx => tx.category.type === 'Gasto');
+  
+    // 4. Obtener total de amortizaciones pagadas del mes
+    const amortizationsResult = await this.prisma.amortization.aggregate({
+      _sum: {
+        quota: true,
+      },
       where: {
-        category: { user_id: userId, type: 'Gasto' },
-        date: {
-          gte: format({
-            date: new Date(year, month - 1, 1),
-            format: 'YYYY-MM-DD',
-          }),
+        debt: {
+          user_id: userId,
+        },
+        payment_date: {
+          gte: format({ date: new Date(year, month - 1, 1), format: 'YYYY-MM-DD' }),
           lt: format({ date: new Date(year, month, 1), format: 'YYYY-MM-DD' }),
         },
-      },
-      include: {
-        category: true,
+        status: 'Pagado',
       },
     });
   
-    // 4. Calcular ingresos y gastos totales
+    // 5. Obtener total de contribuciones a metas del mes
+    const goalContribution = await this.prisma.goalContribution.aggregate({
+      _sum: {
+        amount: true,
+      },
+      where: {
+        goal: {
+          user_id: userId,
+        },
+        date: {
+          gte: format({ date: new Date(year, month - 1, 1), format: 'YYYY-MM-DD' }),
+          lt: format({ date: new Date(year, month, 1), format: 'YYYY-MM-DD' }),
+        },
+      },
+    });
+  
+    // 6. Extraer totales
+    const totalDebtPaid = amortizationsResult._sum.quota?.toNumber() || 0;
+    const totalGoalContributionPaid = goalContribution._sum.amount?.toNumber() || 0;
+  
+    // 7. Calcular ingresos y gastos totales
     const salaryAmount = lastSalary
       ? parseFloat(lastSalary.salary_amount.toString())
       : 0;
@@ -67,23 +92,26 @@ export class FinanceService {
       0,
     );
   
-    // 5. Calcular porcentaje de gasto
-    const expensePercentage =
-      totalIncome > 0 ? (totalExpenses / totalIncome) * 100 : 0;
+    // 8. Calcular gastos totales incluyendo deudas y metas
+    const totalExpensesWithDebtAndGoals = totalExpenses + totalDebtPaid + totalGoalContributionPaid;
   
-    // 6. Calcular porcentaje de días transcurridos
+    // 9. Calcular porcentaje de gasto (incluyendo deudas y metas)
+    const expensePercentage =
+      totalIncome > 0 ? (totalExpensesWithDebtAndGoals / totalIncome) * 100 : 0;
+  
+    // 10. Calcular porcentaje de días transcurridos
     const daysInMonth = new Date(year, month, 0).getDate();
     const currentDay = Math.min(new Date().getDate(), daysInMonth);
     const daysPassedPercentage = (currentDay / daysInMonth) * 100;
   
-    // 7. Calcular porcentaje de gastos considerando el tiempo transcurrido
+    // 11. Calcular porcentaje de gastos considerando el tiempo transcurrido
     const expectedExpensesByTime = totalIncome * (daysPassedPercentage / 100);
     const timeAdjustedExpensePercentage =
       expectedExpensesByTime > 0
-        ? (totalExpenses / expectedExpensesByTime) * 100
+        ? (totalExpensesWithDebtAndGoals / expectedExpensesByTime) * 100
         : 0;
   
-    // 8. Identificar categorías principales de gasto
+    // 12. Identificar categorías principales de gasto (SOLO gastos variables)
     const expensesByCategory = {};
     expenseTransactions.forEach((tx) => {
       const categoryName = tx.category.name;
@@ -93,46 +121,77 @@ export class FinanceService {
       expensesByCategory[categoryName] += parseFloat(tx.amount.toString());
     });
   
-    // Ordenar categorías por monto de gasto y obtener las top 3
-    const topCategories = Object.entries(expensesByCategory)
+    // 13. Crear categorías para vista completa (incluyendo compromisos)
+    const allExpensesByCategory = { ...expensesByCategory };
+    if (totalDebtPaid > 0) {
+      allExpensesByCategory['Pagos de Deuda'] = totalDebtPaid;
+    }
+    if (totalGoalContributionPaid > 0) {
+      allExpensesByCategory['Contribuciones a Metas'] = totalGoalContributionPaid;
+    }
+  
+    // 14. Top categorías para vista completa
+    const topCategories = Object.entries(allExpensesByCategory)
       .sort((a, b) => Number(b[1]) - Number(a[1]))
       .slice(0, 3)
       .map(([category, amount]) => ({
         category,
-        // eslint-disable-next-line @typescript-eslint/no-base-to-string
         amount: parseFloat(amount.toString()).toFixed(2),
-        // eslint-disable-next-line @typescript-eslint/no-base-to-string
+        percentage: ((parseFloat(amount.toString()) / totalExpensesWithDebtAndGoals) * 100).toFixed(2)
+      }));
+  
+    // 15. Top categorías de gastos variables (para recomendaciones)
+    const topVariableExpenses = Object.entries(expensesByCategory)
+      .sort((a, b) => Number(b[1]) - Number(a[1]))
+      .slice(0, 2)
+      .map(([category, amount]) => ({
+        category,
+        amount: parseFloat(amount.toString()).toFixed(2),
         percentage: ((parseFloat(amount.toString()) / totalExpenses) * 100).toFixed(2)
       }));
   
-    // 9. Generar recomendación mejorada
+    // 16. Generar recomendación inteligente
     let recommendation = '';
+    
     if (timeAdjustedExpensePercentage > 110) {
-      recommendation = `¡Alerta! Estás gastando demasiado rápido. Has usado el ${expensePercentage.toFixed(2)}% de tus ingresos cuando solo ha transcurrido el ${daysPassedPercentage.toFixed(2)}% del mes. Tu categoría de mayor gasto es ${topCategories[0]?.category || 'N/A'} (${topCategories[0]?.percentage || 0}% de tus gastos). Considera reducir gastos en esta categoría para equilibrar tu presupuesto.`;
+      if (totalExpenses > totalDebtPaid + totalGoalContributionPaid) {
+        // Los gastos variables son significativos
+        recommendation = `¡Alerta! Estás gastando demasiado rápido. Has usado el ${expensePercentage.toFixed(2)}% de tus ingresos cuando solo ha transcurrido el ${daysPassedPercentage.toFixed(2)}% del mes. Aunque tienes compromisos importantes (deudas: $${totalDebtPaid.toFixed(2)}, metas: $${totalGoalContributionPaid.toFixed(2)}), considera reducir gastos variables como ${topVariableExpenses[0]?.category || 'gastos opcionales'}.`;
+      } else {
+        // Los compromisos son la mayoría
+        recommendation = `Has usado el ${expensePercentage.toFixed(2)}% de tus ingresos con el ${daysPassedPercentage.toFixed(2)}% del mes transcurrido. La mayoría son compromisos financieros (deudas: $${totalDebtPaid.toFixed(2)}, metas: $${totalGoalContributionPaid.toFixed(2)}). Mantén control sobre los gastos variables restantes.`;
+      }
     } else if (timeAdjustedExpensePercentage > 100) {
-      recommendation = `Estás gastando ligeramente por encima del ritmo recomendado. Has usado el ${expensePercentage.toFixed(2)}% de tus ingresos con el ${daysPassedPercentage.toFixed(2)}% del mes transcurrido. Vigila tus gastos en ${topCategories[0]?.category || 'N/A'} y ${topCategories[1]?.category || 'N/A'} para mantenerte dentro del presupuesto.`;
+      recommendation = `Estás gastando ligeramente por encima del ritmo recomendado (${expensePercentage.toFixed(2)}% usado con ${daysPassedPercentage.toFixed(2)}% del mes). ${topVariableExpenses.length > 0 ? `Vigila gastos en ${topVariableExpenses[0]?.category}` : 'Controla los gastos variables restantes'} para mantenerte dentro del presupuesto.`;
     } else if (timeAdjustedExpensePercentage > 90) {
-      recommendation = `Tu ritmo de gastos es adecuado. Has usado el ${expensePercentage.toFixed(2)}% de tus ingresos con el ${daysPassedPercentage.toFixed(2)}% del mes transcurrido. Sigues un buen equilibrio presupuestario.`;
+      recommendation = `Tu ritmo de gastos es adecuado. Has usado el ${expensePercentage.toFixed(2)}% de tus ingresos con el ${daysPassedPercentage.toFixed(2)}% del mes transcurrido. Sigues un buen equilibrio presupuestario entre compromisos ($${(totalDebtPaid + totalGoalContributionPaid).toFixed(2)}) y gastos variables ($${totalExpenses.toFixed(2)}).`;
     } else {
-      recommendation = `¡Excelente control de gastos! Estás gastando a un ritmo menor al esperado, solo has usado el ${expensePercentage.toFixed(2)}% de tus ingresos con el ${daysPassedPercentage.toFixed(2)}% del mes transcurrido. Podrías considerar ahorrar o invertir el excedente.`;
+      recommendation = `¡Excelente control de gastos! Solo has usado el ${expensePercentage.toFixed(2)}% de tus ingresos con el ${daysPassedPercentage.toFixed(2)}% del mes transcurrido. Tus compromisos financieros están bien manejados y tienes un buen saldo restante de $${(totalIncome - totalExpensesWithDebtAndGoals).toFixed(2)}.`;
     }
   
-    // 10. Respuesta final completa
+    // 17. Calcular saldo restante
+    const remainingSalary = totalIncome - totalExpensesWithDebtAndGoals;
+  
+    // 18. Respuesta final completa
     return {
-       'message' : 'Financial summary generated successfully',
-       'data': {
+      'message': 'Financial summary generated successfully',
+      'data': {
         totalIncome: totalIncome.toFixed(2),
         salaryAmount: salaryAmount.toFixed(2),
         otherIncome: otherIncome.toFixed(2),
         totalExpenses: totalExpenses.toFixed(2),
-        netBalance: (totalIncome - totalExpenses).toFixed(2),
+        totalDebtPaid: totalDebtPaid.toFixed(2),
+        totalGoalContributionPaid: totalGoalContributionPaid.toFixed(2),
+        totalExpensesWithDebtAndGoals: totalExpensesWithDebtAndGoals.toFixed(2),
+        netBalance: remainingSalary.toFixed(2),
         expensePercentage: expensePercentage.toFixed(2),
         daysPassedPercentage: daysPassedPercentage.toFixed(2),
         expectedExpensesByTime: expectedExpensesByTime.toFixed(2),
         timeAdjustedExpensePercentage: timeAdjustedExpensePercentage.toFixed(2),
         topExpenseCategories: topCategories,
+        topVariableExpenses: topVariableExpenses,
         recommendation,
-       }
+      }
     };
   }
 
@@ -142,11 +201,11 @@ export class FinanceService {
       where: { user_id: userId },
       orderBy: { effective_date: 'desc' },
     });
-
-    // 2. Obtener transacciones de ingresos del mes con categorías
-    const incomeTransactions = await this.prisma.transaction.findMany({
+  
+    // 2. Obtener TODAS las transacciones del mes en una sola consulta
+    const allTransactions = await this.prisma.transaction.findMany({
       where: {
-        category: { user_id: userId, type: 'Ingreso' },
+        category: { user_id: userId },
         date: {
           gte: format({
             date: new Date(year, month - 1, 1),
@@ -159,25 +218,49 @@ export class FinanceService {
         category: true,
       },
     });
-
-    // 3. Obtener transacciones de gastos del mes con categorías
-    const expenseTransactions = await this.prisma.transaction.findMany({
+  
+    // 3. Separar transacciones por tipo
+    const incomeTransactions = allTransactions.filter(tx => tx.category.type === 'Ingreso');
+    const expenseTransactions = allTransactions.filter(tx => tx.category.type === 'Gasto');
+  
+    // 4. Obtener total de amortizaciones pagadas del mes
+    const amortizationsResult = await this.prisma.amortization.aggregate({
+      _sum: {
+        quota: true,
+      },
       where: {
-        category: { user_id: userId, type: 'Gasto' },
+        debt: {
+          user_id: userId,
+        },
+        payment_date: {
+          gte: format({ date: new Date(year, month - 1, 1), format: 'YYYY-MM-DD' }),
+          lt: format({ date: new Date(year, month, 1), format: 'YYYY-MM-DD' }),
+        },
+        status: 'Pagado',
+      },
+    });
+  
+    // 5. Obtener total de contribuciones a metas del mes
+    const goalContribution = await this.prisma.goalContribution.aggregate({
+      _sum: {
+        amount: true,
+      },
+      where: {
+        goal: {
+          user_id: userId,
+        },
         date: {
-          gte: format({
-            date: new Date(year, month - 1, 1),
-            format: 'YYYY-MM-DD',
-          }),
+          gte: format({ date: new Date(year, month - 1, 1), format: 'YYYY-MM-DD' }),
           lt: format({ date: new Date(year, month, 1), format: 'YYYY-MM-DD' }),
         },
       },
-      include: {
-        category: true,
-      },
     });
-
-    // 4. Calcular ingresos y gastos totales
+  
+    // 6. Extraer totales
+    const totalDebtPaid = amortizationsResult._sum.quota?.toNumber() || 0;
+    const totalGoalContributionPaid = goalContribution._sum.amount?.toNumber() || 0;
+  
+    // 7. Calcular ingresos y gastos totales
     const salaryAmount = lastSalary
       ? parseFloat(lastSalary.salary_amount.toString())
       : 0;
@@ -190,74 +273,115 @@ export class FinanceService {
       (sum, tx) => sum + parseFloat(tx.amount.toString()),
       0,
     );
-
-    // 5. Calcular porcentaje de gasto
+  
+    // 8. Calcular gastos totales incluyendo deudas y metas
+    const totalExpensesWithDebtAndGoals = totalExpenses + totalDebtPaid + totalGoalContributionPaid;
+  
+    // 9. Calcular porcentaje de gasto (incluyendo deudas y metas)
     const expensePercentage =
-      totalIncome > 0 ? (totalExpenses / totalIncome) * 100 : 0;
-
-    // 6. Calcular porcentaje de días transcurridos
+      totalIncome > 0 ? (totalExpensesWithDebtAndGoals / totalIncome) * 100 : 0;
+  
+    // 10. Calcular porcentaje de días transcurridos
     const daysInMonth = new Date(year, month, 0).getDate();
     const currentDay = Math.min(new Date().getDate(), daysInMonth);
     const daysPassedPercentage = (currentDay / daysInMonth) * 100;
-
-    // 7. Preparar las transacciones para el prompt
+  
+    // 11. Calcular porcentaje de gastos considerando el tiempo transcurrido
+    const expectedExpensesByTime = totalIncome * (daysPassedPercentage / 100);
+    const timeAdjustedExpensePercentage =
+      expectedExpensesByTime > 0
+        ? (totalExpensesWithDebtAndGoals / expectedExpensesByTime) * 100
+        : 0;
+  
+    // 12. Preparar las transacciones para el prompt (gastos variables)
     const formattedExpenses = expenseTransactions.map((tx) => ({
       descripcion: tx.description || tx.category.name,
       categoria: tx.category.name,
       monto: parseFloat(tx.amount.toString()).toFixed(2),
       fecha: new Date(tx.date).toLocaleDateString(),
     }));
-
-    // 8. Calcular porcentaje de gastos considerando el tiempo transcurrido
-    const expectedExpensesByTime = totalIncome * (daysPassedPercentage / 100);
-    const timeAdjustedExpensePercentage =
-      expectedExpensesByTime > 0
-        ? (totalExpenses / expectedExpensesByTime) * 100
-        : 0;
-
-    // 9. Crear un prompt simplificado para la IA
+  
+    // 13. Preparar categorías para el prompt
+    const expensesByCategory = {};
+    expenseTransactions.forEach((tx) => {
+      const categoryName = tx.category.name;
+      if (!expensesByCategory[categoryName]) {
+        expensesByCategory[categoryName] = 0;
+      }
+      expensesByCategory[categoryName] += parseFloat(tx.amount.toString());
+    });
+  
+    const topVariableExpenses = Object.entries(expensesByCategory)
+      .sort((a, b) => Number(b[1]) - Number(a[1]))
+      .slice(0, 3)
+      .map(([category, amount]) => ({
+        categoria: category,
+        monto: parseFloat(amount.toString()).toFixed(2),
+        porcentaje: ((parseFloat(amount.toString()) / totalExpenses) * 100).toFixed(2)
+      }));
+  
+    // 14. Crear un prompt mejorado para la IA
     const prompt = `
       Soy tu asistente financiero personal. Analizaré tu situación financiera del mes ${month}/${year}:
-
-      DATOS FINANCIEROS:
-      - Has gastado $${totalExpenses.toFixed(2)} de tus $${totalIncome.toFixed(2)} de ingresos totales (${expensePercentage.toFixed(2)}%)
+  
+      RESUMEN FINANCIERO COMPLETO:
+      - Ingresos totales: $${totalIncome.toFixed(2)} (Salario: $${salaryAmount.toFixed(2)} + Otros: $${otherIncome.toFixed(2)})
+      - Gastos variables: $${totalExpenses.toFixed(2)}
+      - Pagos de deuda: $${totalDebtPaid.toFixed(2)}
+      - Contribuciones a metas: $${totalGoalContributionPaid.toFixed(2)}
+      - TOTAL GASTADO: $${totalExpensesWithDebtAndGoals.toFixed(2)} (${expensePercentage.toFixed(2)}% de ingresos)
+      - Saldo restante: $${(totalIncome - totalExpensesWithDebtAndGoals).toFixed(2)}
+  
+      ANÁLISIS TEMPORAL:
       - Ha transcurrido el ${daysPassedPercentage.toFixed(2)}% del mes
-      - Gastos esperados según tiempo transcurrido: $${expectedExpensesByTime.toFixed(2)}
-      - Tu ritmo de gastos actual: ${timeAdjustedExpensePercentage.toFixed(2)}% (>100% significa que gastas más rápido de lo recomendado)
-
-      DESGLOSE DE GASTOS:
+      - Gastos esperados según tiempo: $${expectedExpensesByTime.toFixed(2)}
+      - Tu ritmo de gastos actual: ${timeAdjustedExpensePercentage.toFixed(2)}% (>100% = gastas más rápido de lo ideal)
+  
+      COMPROMISOS FINANCIEROS:
+      - Pagos de deuda del mes: $${totalDebtPaid.toFixed(2)} (${totalDebtPaid > 0 ? 'compromiso fijo positivo' : 'sin pagos'})
+      - Metas de ahorro del mes: $${totalGoalContributionPaid.toFixed(2)} (${totalGoalContributionPaid > 0 ? 'compromiso positivo' : 'sin contribuciones'})
+  
+      TOP CATEGORÍAS DE GASTOS VARIABLES:
+      ${JSON.stringify(topVariableExpenses, null, 2)}
+  
+      DETALLE DE GASTOS VARIABLES:
       ${JSON.stringify(formattedExpenses, null, 2)}
-
-      Basándome en estos datos, te proporcionaré:
-      1. Una evaluación clara de tu ritmo de gastos en relación con el tiempo transcurrido del mes
-      2. Identificación de las categorías con mayor impacto en tu presupuesto
-      3. Una recomendación específica y práctica para mejorar tu salud financiera
-
-      Mi análisis será conciso, directo, corto y adaptado a tus patrones de gasto actuales.
+  
+      IMPORTANTE: Los pagos de deuda y contribuciones a metas son compromisos financieros positivos, NO son gastos problemáticos.
+  
+      Proporciona un análisis que incluya:
+      1. Evaluación del ritmo de gastos considerando que tienes compromisos financieros importantes
+      2. Identificación de patrones en gastos variables (categorías donde puedes optimizar)
+      3. Recomendación específica que distinga entre gastos controlables vs compromisos fijos
+      4. Una perspectiva positiva sobre el manejo de deudas y metas si aplica
+  
+      Mantén el análisis conciso, práctico y motivador.
     `;
-
+  
     log(prompt);
-
-    // 9. Obtener la recomendación de la IA
+  
+    // 15. Obtener la recomendación de la IA
     const aiRecommendation =
       await this.generativeAiService.generateContent(prompt);
-
-    // 10. Respuesta final simplificada
+  
+    // 16. Respuesta final completa
     return {
-      'message' : 'Financial summary generated successfully',
+      'message': 'Financial summary generated successfully',
       'data': {
         totalIncome: totalIncome.toFixed(2),
         salaryAmount: salaryAmount.toFixed(2),
         otherIncome: otherIncome.toFixed(2),
         totalExpenses: totalExpenses.toFixed(2),
-        netBalance: (totalIncome - totalExpenses).toFixed(2),
+        totalDebtPaid: totalDebtPaid.toFixed(2),
+        totalGoalContributionPaid: totalGoalContributionPaid.toFixed(2),
+        totalExpensesWithDebtAndGoals: totalExpensesWithDebtAndGoals.toFixed(2),
+        netBalance: (totalIncome - totalExpensesWithDebtAndGoals).toFixed(2),
         expensePercentage: expensePercentage.toFixed(2),
         daysPassedPercentage: daysPassedPercentage.toFixed(2),
         expectedExpensesByTime: expectedExpensesByTime.toFixed(2),
         timeAdjustedExpensePercentage: timeAdjustedExpensePercentage.toFixed(2),
         recommendation: aiRecommendation,
       }
-
     };
   }
 }
