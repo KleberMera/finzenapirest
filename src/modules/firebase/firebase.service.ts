@@ -9,29 +9,8 @@ import * as bcrypt from 'bcryptjs'; // Para hashear contraseñas
 import { transporterMail } from 'src/providers/mail/mail';
 import { htmlContent } from 'src/providers/mail/content';
 import { log } from 'console';
-
-export interface FirebaseDecodedToken {
-  name: string;
-  picture: string;
-  iss: string;
-  aud: string;
-  auth_time: number;
-  user_id: string;
-  sub: string;
-  iat: number;
-  exp: number;
-  email: string;
-  email_verified: boolean;
-  firebase: {
-    identities: {
-      'google.com': string[];
-      email: string[];
-    };
-    sign_in_provider: string;
-  };
-  uid: string;
-}
 import { customAlphabet } from 'nanoid';
+import { FirebaseDecodedToken } from 'src/models/recurrent/firebase.types';
 
 @Injectable()
 export class FirebaseService {
@@ -46,19 +25,28 @@ async loginWithGoogle(idToken: string) {
     try {
       const decodedToken = await firebaseAdmin.auth().verifyIdToken(idToken) as FirebaseDecodedToken;
       
+      // Buscar usuario por UID de Firebase o por email
       const existingUser = await this.prismaService.user.findFirst({
         where: {
           OR: [
-            { email: decodedToken.email },
-            { firebaseUid: decodedToken.uid }
+            { firebaseUid: decodedToken.uid },
+            { email: decodedToken.email }
           ]
         },
       });
 
+      // Si no existe el usuario
       if (!existingUser) {
-        console.log(decodedToken.uid)
         await firebaseAdmin.auth().deleteUser(decodedToken.uid);
         throw new BadRequestException('Usuario no encontrado. Por favor, regístrese primero.');
+      }
+
+      // Si el usuario existe pero no tiene firebaseUid, lo actualizamos
+      if (existingUser.email === decodedToken.email && !existingUser.firebaseUid) {
+        await this.prismaService.user.update({
+          where: { id: existingUser.id },
+          data: { firebaseUid: decodedToken.uid }
+        });
       }
 
       // Validar que el status del usuario esté en true
@@ -232,6 +220,81 @@ async loginWithGoogle(idToken: string) {
     return { message: 'Contraseña restablecida con éxito' };
   }
 
+
+  /**
+   * Vincula una cuenta existente con Google
+   * @param userId ID del usuario existente
+   * @param idToken Token de Google
+   */
+  async linkWithGoogle(userId: number, idToken: string) {
+    try {
+      // Verificar el token de Google
+      const decodedToken = await firebaseAdmin.auth().verifyIdToken(idToken) as FirebaseDecodedToken;
+      
+      // Verificar si el UID de Google ya está en uso
+      const existingUserWithSameUid = await this.prismaService.user.findFirst({
+        where: { firebaseUid: decodedToken.uid }
+      });
+
+      if (existingUserWithSameUid) {
+        throw new BadRequestException('Esta cuenta de Google ya está vinculada a otro usuario');
+      }
+
+      // Obtener el usuario existente
+      const existingUser = await this.prismaService.user.findUnique({
+        where: { id: userId }
+      });
+
+      if (!existingUser) {
+        throw new BadRequestException('Usuario no encontrado');
+      }
+
+      // Verificar si el correo coincide
+      if (existingUser.email !== decodedToken.email) {
+        throw new BadRequestException('El correo de la cuenta no coincide con el de Google');
+      }
+
+      // Actualizar el usuario con el UID de Firebase
+      const updatedUser = await this.prismaService.user.update({
+        where: { id: userId },
+        data: { firebaseUid: decodedToken.uid },
+        select: {
+          id: true,
+          email: true,
+          username: true,
+          name: true,
+          last_name: true,
+          avatar: true,
+          status: true,
+          rol_id: true,
+          firebaseUid: true,
+          createdAt: true,
+          updatedAt: true
+        }
+      });
+
+      // Generar nuevo token JWT
+      const payload = { 
+        ...updatedUser,
+        createdAt: updatedUser.createdAt.toISOString(),
+        updatedAt: updatedUser.updatedAt.toISOString()
+      };
+      
+      const access_token = await this.jwtService.signAsync(payload);
+
+      return {
+        message: 'Cuenta vinculada con Google exitosamente',
+        data: updatedUser,
+        access_token
+      };
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      console.error('Error al vincular con Google:', error);
+      throw new BadRequestException('Error al vincular la cuenta con Google');
+    }
+  }
 
   async verifyCode(code: string): Promise<{ message: string; isValid: boolean }> {
     try {

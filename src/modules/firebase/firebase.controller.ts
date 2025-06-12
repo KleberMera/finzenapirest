@@ -4,7 +4,9 @@ import {
   HttpCode,
   HttpStatus,
   Post,
+  Request,
 } from '@nestjs/common';
+
 import { FirebaseService } from './firebase.service';
 import { Public } from 'src/guards/token.guard';
 @Public()
@@ -35,5 +37,15 @@ export class FirebaseController {
   @Post('verify-code')
   async verifyCode(@Body('code') code: string) {
     return this.firebaseService.verifyCode(code);
+  }
+
+  
+  @Post('link-google')
+  async linkWithGoogle(@Body('userId') userId: number, @Body('idToken') idToken: string) {
+   // const userId = req.user.id; // Asumiendo que el ID del usuario está en req.user.id
+    return this.firebaseService.linkWithGoogle(
+    Number(userId),
+    idToken
+    );
   }
 }
