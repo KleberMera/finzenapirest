@@ -135,17 +135,38 @@ export class TicketsService {
   async processReceipt(userId: number, fileBuffer: Buffer, mimeType: string) {
     const prompt = this.getReceiptPrompt('Imagen en memoria');
   
-    // Agregar logs para depuración
+    // Validar el tamaño del archivo
+    if (fileBuffer.length === 0) {
+      throw new Error('El archivo está vacío o no contiene datos');
+    }
+    
     console.log(`Tamaño del buffer: ${fileBuffer.length} bytes`);
     console.log(`MimeType: ${mimeType}`);
-    const base64Data = fileBuffer.toString('base64');
-    console.log(`Inicio de base64: ${base64Data.substring(0, 100)}...`);
+    
+    try {
+      const base64Data = fileBuffer.toString('base64');
+      console.log(`Inicio de base64: ${base64Data.substring(0, 100)}...`);
   
-    const extractedText = await this.generativeAIService.analyzeImageBase(base64Data, mimeType, prompt);
-    const parsedData = this.parseExtractedText(extractedText);
+      const extractedText = await this.generativeAIService.analyzeImageBase(base64Data, mimeType, prompt);
+      
+      // Verificar si el texto extraído es válido
+      if (!extractedText || extractedText.trim().length === 0) {
+        throw new Error('No se pudo extraer información del recibo. La imagen podría estar borrosa o no contener texto legible.');
+      }
+      
+      const parsedData = this.parseExtractedText(extractedText);
+      
+      // Validar los datos parseados
+      if (!this.isValidTransactionData(parsedData)) {
+        throw new Error('La información extraída del recibo no es suficiente para generar una transacción.');
+      }
   
-    console.log('Información extraída:', parsedData);
-    return await this.saveTransaction(userId, parsedData);
+      console.log('Información extraída:', parsedData);
+      return await this.saveTransaction(userId, parsedData);
+    } catch (error) {
+      console.error('Error al procesar el recibo:', error);
+      throw new Error(`Error al procesar el recibo: ${error.message}`);
+    }
   }
 
   async processTextTransaction(userId: number, text: string) {
@@ -178,6 +199,11 @@ export class TicketsService {
   }
    
   private async saveTransaction(userId: number, parsedData: any, s3Key?: string) {
+    // Validar que los datos requeridos estén presentes
+    if (!parsedData) {
+      throw new Error('No se proporcionaron datos para guardar la transacción');
+    }
+    
     const {
       amount,
       description,
@@ -189,6 +215,15 @@ export class TicketsService {
       icon,
       nameTransaction,
     } = parsedData;
+    
+    // Validar que los campos requeridos tengan valores
+    if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
+      throw new Error('El monto de la transacción no es válido');
+    }
+    
+    if (!categoryName) {
+      throw new Error('No se pudo determinar la categoría de la transacción');
+    }
 
     // Validar y ajustar la categoría basándose en las categorías del sistema
     const validatedCategory = this.validateCategory(categoryName, type);
@@ -266,6 +301,20 @@ export class TicketsService {
     }
   }
   
+  private isValidTransactionData(parsedData: any): boolean {
+    // Verificar que los campos mínimos requeridos estén presentes
+    if (!parsedData) return false;
+    
+    // Verificar que haya al menos un ítem o un monto
+    const hasValidItems = Array.isArray(parsedData.items) && parsedData.items.length > 0 && 
+                         parsedData.items.every((item: any) => item.name && item.quantity && item.unitPrice);
+    
+    const hasValidAmount = parsedData.amount && !isNaN(parseFloat(parsedData.amount)) && parseFloat(parsedData.amount) > 0;
+    
+    // La transacción es válida si tiene ítems válidos O un monto válido
+    return hasValidItems || hasValidAmount;
+  }
+
   private parseExtractedText(text: string): {
     items: { name: string; quantity: string; unitPrice: string }[];
     amount: string;
@@ -277,11 +326,17 @@ export class TicketsService {
     icon: string;
     nameTransaction: string;
   } {
-    // Utilizamos expresiones regulares para extraer cada campo del JSON retornado
-    const jsonMatch = text.match(/{[\s\S]*}/);
-    if (!jsonMatch) {
-      throw new Error('No se pudo parsear la respuesta de la IA.');
+    // Verificar si el texto está vacío
+    if (!text || text.trim().length === 0) {
+      throw new Error('No se recibió respuesta de la IA o la respuesta está vacía.');
     }
+    
+    // Intentar extraer el JSON de la respuesta
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      throw new Error('El formato de la respuesta de la IA no es válido. No se encontró un objeto JSON.');
+    }
+    
     try {
       const data = JSON.parse(jsonMatch[0]);
       const l = "es"
@@ -292,23 +347,53 @@ export class TicketsService {
       // Determinar el tipo de transacción
       const transactionType = (data.type || 'gasto').toLowerCase();
       
+      // Validar que el tipo sea 'ingreso' o 'gasto'
+      if (transactionType !== 'ingreso' && transactionType !== 'gasto') {
+        throw new Error('Tipo de transacción no válido. Debe ser "ingreso" o "gasto".');
+      }
+      
       // Validar la categoría antes de devolverla
-      const categoryInfo = this.validateCategory(data.categoryName || (transactionType === 'ingreso' ? 'Otros Ingresos' : 'Otros Gastos'), transactionType);
+      const categoryInfo = this.validateCategory(
+        data.categoryName || (transactionType === 'ingreso' ? 'Otros Ingresos' : 'Otros Gastos'), 
+        transactionType
+      );
+      
+      // Validar y formatear el monto
+      let amount = '0';
+      if (data.amount) {
+        const amountValue = parseFloat(data.amount);
+        if (!isNaN(amountValue) && amountValue >= 0) {
+          amount = amountValue.toString();
+        }
+      }
+      
+      // Validar y formatear los ítems
+      let items = [];
+      if (Array.isArray(data.items)) {
+        items = data.items
+          .filter((item: any) => item && item.name && item.quantity && item.unitPrice)
+          .map((item: any) => ({
+            name: item.name.toString().trim(),
+            quantity: item.quantity.toString().trim(),
+            unitPrice: item.unitPrice.toString().trim()
+          }));
+      }
       
       return {
-        items: data.items || [],
-        amount: data.amount || '0',
-        description: data.description || 'Sin descripción',
+        items,
+        amount,
+        description: data.description ? data.description.toString().trim() : 'Sin descripción',
         type: transactionType,
         date: data.date || datenew,
         time: data.time || timenew,
         categoryName: categoryInfo.name,
         icon: categoryInfo.icon,
-        nameTransaction: data.nameTransaction || 'Sin nombre',
+        nameTransaction: data.nameTransaction ? data.nameTransaction.toString().trim() : 'Transacción sin nombre',
       };
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      
     } catch (error) {
-      throw new Error('Error al parsear el JSON extraído.');
+      console.error('Error al parsear la respuesta de la IA:', error);
+      throw new Error(`Error al procesar la información del recibo: ${error.message}`);
     }
   }
 }
