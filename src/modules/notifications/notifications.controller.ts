@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
 import { PrismaService } from 'src/config/prisma/prisma.service';
 import { Public } from 'src/guards/token.guard';
@@ -45,6 +45,27 @@ export class NotificationsController {
     return this.notificationsService.getNotificationsByUserId(Number(userId));
   }
 
+  @Get('filter/:userId')
+  async filterNotifications(
+    @Param() { userId }: { userId: number },
+    @Query('debtId') debtId?: string,
+    @Query('isRead') isRead?: string,
+    @Query('includeAllDebts') includeAllDebts?: string
+  ) {
+    // Convert query parameters to appropriate types
+    const options = {
+      debtId: debtId ? Number(debtId) : undefined,
+      isRead: isRead ? isRead === 'true' : undefined,
+      includeAllDebts: includeAllDebts ? includeAllDebts === 'true' : false
+    };
+
+    return this.notificationsService.filterNotifications(
+      Number(userId),
+      options
+    );
+  }
+
+  
   @Delete('unsubscribe/:userId/:deviceId')
   async unsubscribe(@Param() { userId, deviceId }: { userId: number; deviceId: number },) {
     return this.notificationsService.unsubscribe(Number(userId), Number(deviceId));
@@ -69,5 +90,16 @@ export class NotificationsController {
   @Get('days-before-notify-all/:userId')
   async getDaysBeforeNotifyAll(@Param() { userId }: { userId: number }) {
     return this.notificationsService.getDaysBeforeNotifyAll(Number(userId));
+  }
+
+  @Put('mark-as-read/:notificationId/user/:userId')
+  async markNotificationAsRead(
+    @Param('notificationId') notificationId: string,
+    @Param('userId') userId: string
+  ) {
+    return this.notificationsService.markAsRead(
+      Number(notificationId),
+      Number(userId)
+    );
   }
 }

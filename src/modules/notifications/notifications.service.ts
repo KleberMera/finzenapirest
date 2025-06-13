@@ -153,7 +153,75 @@ async countSubscriptions(userId: number) {
     return {
        message: 'Notificaciones recibidas',
        data: notifications
-      
+    };
+  }
+
+  async filterNotifications(userId: number, options?: { debtId?: number; isRead?: boolean; includeAllDebts?: boolean }) {
+    const where: any = { user_id: userId };
+
+    // Si no se incluyen todas las deudas y se proporciona un debtId, filtrar por debtId
+    if (!options?.includeAllDebts && options?.debtId) {
+      where.debt_id = options.debtId;
+    }
+    // Si se piden todas las deudas, no aplicar filtro por debt_id
+    else if (options?.includeAllDebts) {
+      where.debt_id = { not: null };
+    }
+
+    // Aplicar filtro por estado de lectura si se proporciona
+    if (options?.isRead !== undefined) {
+      where.isRead = options.isRead;
+    }
+
+    const notifications = await this.prisma.notification.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        debt: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
+      }
+    });
+
+    return {
+      message: 'Notificaciones filtradas',
+      data: notifications
+    };
+  }
+
+  async markAsRead(notificationId: number, userId: number) {
+    // Verificar que la notificación pertenece al usuario
+    const notification = await this.prisma.notification.findFirst({
+      where: { 
+        id: notificationId,
+        user_id: userId 
+      },
+    });
+
+    if (!notification) {
+      throw new Error('Notificación no encontrada o no pertenece al usuario.');
+    }
+
+    // Actualizar la notificación como leída
+    const updatedNotification = await this.prisma.notification.update({
+      where: { id: notificationId },
+      data: { isRead: true },
+      include: {
+        debt: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
+      }
+    });
+
+    return {
+      message: 'Notificación marcada como leída',
+      data: updatedNotification
     };
   }
 
