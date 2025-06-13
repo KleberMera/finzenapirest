@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -50,5 +51,49 @@ export class AuthController {
   @Get('user-role/:id')
   async getUserRoleById(@Param('id') id: string) {
     return await this.authService.getUserRoleById(Number(id));
+  }
+
+  /**
+   * Verifica si la contraseña proporcionada coincide con la contraseña actual del usuario
+   * @param userId - ID del usuario
+   * @param body - Objeto que contiene la contraseña actual
+   * @returns Objeto con indicador de si la contraseña es correcta
+   */
+  @UseGuards(TokenGuard)
+  @Post('verify-password/:userId')
+  async verifyCurrentPassword(
+    @Param('userId') userId: string,
+    @Body('password') password: string
+  ) {
+    const isMatch = await this.authService.verifyCurrentPassword(
+      Number(userId),
+      password
+    );
+    
+    return {
+      success: isMatch,
+      message: isMatch 
+        ? 'La contraseña es correcta' 
+        : 'La contraseña es incorrecta'
+    };
+  }
+
+  /**
+   * Restablece la contraseña de un usuario
+   * @param userId - ID del usuario
+   * @param body - Objeto que contiene la nueva contraseña
+   * @returns Objeto con el resultado de la operación
+   */
+  @UseGuards(TokenGuard)
+  @Post('reset-password/:userId')
+  async resetPassword(
+    @Param('userId') userId: string,
+    @Body('newPassword') newPassword: string
+  ) {
+    if (!newPassword) {
+      throw new BadRequestException('La nueva contraseña es requerida');
+    }
+
+    return await this.authService.resetPassword(Number(userId), newPassword);
   }
 }

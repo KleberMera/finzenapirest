@@ -153,6 +153,37 @@ async login(user: UserDTO) {
    * @param id - The user’s ID.
    * @returns User data without password.
    */
+  /**
+   * Verifica si la contraseña proporcionada coincide con la contraseña actual del usuario
+   * @param userId - ID del usuario
+   * @param currentPassword - Contraseña actual a verificar
+   * @returns Promesa que resuelve a true si la contraseña es correcta, false en caso contrario
+   * @throws NotFoundException si el usuario no existe
+   */
+  async verifyCurrentPassword(userId: number, currentPassword: string): Promise<boolean> {
+    const user = await this.prismaService.user.findUnique({
+      where: { id: userId },
+      select: { password: true }
+    });
+
+    if (!user) {
+      throw new NotFoundException(`Usuario con ID ${userId} no encontrado`);
+    }
+
+    // Si el usuario no tiene contraseña (por ejemplo, se registró con Google)
+    if (!user.password) {
+      return false;
+    }
+
+    // Comparar la contraseña proporcionada con el hash almacenado
+    return await compare(currentPassword, user.password);
+  }
+
+  /**
+   * Obtiene un usuario por su ID sin la contraseña
+   * @param id - ID del usuario
+   * @returns Datos del usuario sin la contraseña
+   */
   async getUserById(id: number) {
     const user = await this.prismaService.user.findUnique({
       where: { id },
@@ -212,5 +243,44 @@ async login(user: UserDTO) {
       data: user,
     };
   }
+
+
+
+    /**
+     * Restablece la contraseña de un usuario
+     * @param userId - ID del usuario
+     * @param newPassword - Nueva contraseña
+     * @returns Mensaje de éxito
+     */
+    async resetPassword(userId: number, newPassword: string) {
+      try {
+        // Verificar que el usuario existe
+        const user = await this.prismaService.user.findUnique({
+          where: { id: userId },
+        });
+
+        if (!user) {
+          throw new NotFoundException('Usuario no encontrado');
+        }
+
+        // Hashear la nueva contraseña
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        
+        // Actualizar la contraseña del usuario
+        await this.prismaService.user.update({
+          where: { id: userId },
+          data: { password: hashedPassword },
+        });
+
+        return { 
+          success: true,
+          message: 'Contraseña actualizada exitosamente' 
+        };
+      } catch (error) {
+        console.error('Error al restablecer la contraseña:', error);
+        throw new InternalServerErrorException('Error al actualizar la contraseña');
+      }
+    }
+  
  
 }
