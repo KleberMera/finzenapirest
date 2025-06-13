@@ -97,7 +97,7 @@ export class TicketsController {
   }
   
   @Post('reset-conversation/:userId')
-  async resetConversation(@Param('userId') userId: string) {
+   resetConversation(@Param('userId') userId: string) {
     try {
       // Validar que el userId sea un número
       const userIdNum = parseInt(userId, 10);
@@ -106,7 +106,7 @@ export class TicketsController {
       }
 
       // Reiniciar la conversación
-      const result = await this.ticketsService.resetConversation(userIdNum);
+      const result =  this.ticketsService.resetConversation(userIdNum);
       return result;
     } catch (error) {
       console.error('Error al reiniciar la conversación:', error);

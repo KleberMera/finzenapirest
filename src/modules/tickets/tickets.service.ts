@@ -1,11 +1,11 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 import { Injectable } from '@nestjs/common';
-
 import { PrismaService } from 'src/config/prisma/prisma.service';
 import { format } from '@formkit/tempo';
 import { log } from 'console';
 import { GenerativeAiService } from 'src/config/generative-ai/generative-ai.service';
+import { greetingKeywords, identityKeywords, incomeCategories, sriExpenseCategories, transactionKeywords } from 'src/models/datasetIa';
 
 
 @Injectable()
@@ -14,51 +14,6 @@ export class TicketsService {
     private readonly generativeAIService: GenerativeAiService,
     private readonly prisma: PrismaService
   ) {}
-
-  // Categorías del SRI para gastos
-  private readonly sriExpenseCategories = [
-    { name: 'Vivienda', icon: 'pi pi-home', keywords: ['arriendo', 'alquiler', 'hipoteca', 'agua', 'luz', 'electricidad', 'gas', 'internet', 'teléfono fijo', 'condominio', 'mantenimiento hogar'] },
-    { name: 'Salud', icon: 'pi pi-heart', keywords: ['médico', 'doctor', 'hospital', 'clínica', 'farmacia', 'medicinas', 'seguro médico', 'dental', 'odontólogo', 'oftalmólogo', 'lentes', 'tratamiento'] },
-    { name: 'Educación', icon: 'pi pi-book', keywords: ['colegio', 'escuela', 'universidad', 'matrícula', 'pensión', 'útiles escolares', 'libros', 'uniformes', 'transporte escolar', 'curso', 'taller'] },
-    { name: 'Alimentación', icon: 'pi pi-shopping-cart', keywords: ['supermercado', 'mercado', 'tienda', 'comida', 'alimentos', 'restaurante', 'café', 'frutas', 'verduras', 'carne', 'lácteos'] },
-    { name: 'Vestimenta', icon: 'pi pi-tag', keywords: ['ropa', 'calzado', 'zapatos', 'zapatillas', 'pantalón', 'camisa', 'vestido', 'chaqueta', 'abrigo', 'traje', 'uniforme'] },
-    { name: 'Transporte', icon: 'pi pi-car', keywords: ['gasolina', 'taxi', 'bus', 'pasaje', 'transporte', 'combustible', 'mantenimiento vehículo', 'peaje'] },
-    { name: 'Entretenimiento', icon: 'pi pi-camera', keywords: ['cine', 'teatro', 'concierto', 'evento', 'viaje', 'turismo', 'hotel', 'vacaciones'] },
-    { name: 'Otros Gastos', icon: 'pi pi-folder', keywords: ['otro', 'varios', 'misceláneo'] }
-  ];
-
-  // Categorías para ingresos
-  private readonly incomeCategories = [
-    { name: 'Salario', icon: 'pi pi-dollar', keywords: ['salario', 'sueldo', 'nómina', 'pago mensual', 'remuneración'] },
-    { name: 'Honorarios', icon: 'pi pi-briefcase', keywords: ['honorario', 'factura', 'consultoría', 'asesoría', 'freelance', 'servicios profesionales'] },
-    { name: 'Inversiones', icon: 'pi pi-chart-line', keywords: ['inversión', 'dividendo', 'interés', 'rendimiento', 'ganancia', 'acción', 'bono'] },
-    { name: 'Alquileres', icon: 'pi pi-building', keywords: ['alquiler', 'arriendo', 'renta', 'propiedad'] },
-    { name: 'Venta', icon: 'pi pi-shopping-bag', keywords: ['venta', 'comercio', 'negocio', 'mercadería'] },
-    { name: 'Préstamos', icon: 'pi pi-wallet', keywords: ['préstamo', 'crédito', 'financiamiento'] },
-    { name: 'Reembolsos', icon: 'pi pi-refresh', keywords: ['reembolso', 'devolución', 'retorno', 'reintegro'] },
-    { name: 'Otros Ingresos', icon: 'pi pi-money-bill', keywords: ['otro', 'varios', 'misceláneo', 'regalo', 'herencia', 'premio'] }
-  ];
-
-  // Palabras clave para identificar transacciones
-  private readonly transactionKeywords = [
-    'compra', 'gasto', 'pago', 'pagué', 'compré', 'gasté', 'factura', 'recibo',
-    'ingreso', 'cobro', 'cobré', 'recibí', 'me pagaron', 'transferencia', 'depósito',
-    'dólares', 'USD', '$', 'euros', '€', 'precio', 'costo', 'valor', 'monto',
-    'supermercado', 'tienda', 'restaurante', 'salario', 'sueldo', 'honorarios'
-  ];
-
-  // Palabras clave para identificar saludos
-  private readonly greetingKeywords = [
-    'hola', 'buenos días', 'buenas tardes', 'buenas noches', 'saludos', 'hey',
-    'qué tal', 'cómo estás', 'cómo vas', 'qué hay', 'qué onda', 'qué pasa'
-  ];
-
-  // Palabras clave para identificar preguntas sobre la identidad
-  private readonly identityKeywords = [
-    'quién eres', 'cómo te llamas', 'tu nombre', 'qué eres', 'qué haces',
-    'para qué sirves', 'qué puedes hacer', 'cuál es tu función', 'cuál es tu propósito'
-  ];
-
   /**
    * Procesa un texto del usuario y determina si es una transacción o una conversación
    * @param userId ID del usuario
@@ -70,8 +25,8 @@ export class TicketsService {
     const normalizedText = text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     
     // Verificar si es un saludo o pregunta sobre identidad
-    const isGreeting = this.greetingKeywords.some(keyword => normalizedText.includes(keyword));
-    const isIdentityQuestion = this.identityKeywords.some(keyword => normalizedText.includes(keyword));
+    const isGreeting = greetingKeywords.some(keyword => normalizedText.includes(keyword));
+    const isIdentityQuestion = identityKeywords.some(keyword => normalizedText.includes(keyword));
     
     // Si es un saludo o pregunta sobre identidad, manejar como conversación
     if (isGreeting || isIdentityQuestion) {
@@ -79,7 +34,7 @@ export class TicketsService {
     }
     
     // Verificar si parece una transacción
-    const isLikelyTransaction = this.transactionKeywords.some(keyword => normalizedText.includes(keyword));
+    const isLikelyTransaction = transactionKeywords.some(keyword => normalizedText.includes(keyword));
     
     // Si parece una transacción, procesarla como tal
     if (isLikelyTransaction) {
@@ -185,11 +140,11 @@ export class TicketsService {
   // Método reutilizable para generar el prompt
   private getPromptTemplate(): string {
     // Crear strings para las categorías
-    const expenseCategoriesText = this.sriExpenseCategories
+    const expenseCategoriesText = sriExpenseCategories
       .map(cat => `"${cat.name}" (icon: "${cat.icon}")`)
       .join(', ');
     
-    const incomeCategoriesText = this.incomeCategories
+    const incomeCategoriesText = incomeCategories
       .map(cat => `"${cat.name}" (icon: "${cat.icon}")`)
       .join(', ');
 
@@ -394,7 +349,7 @@ export class TicketsService {
     const normalizedCategory = categoryName.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     
     // Seleccionar la lista de categorías según el tipo
-    const categoriesList = type === 'ingreso' ? this.incomeCategories : this.sriExpenseCategories;
+    const categoriesList = type === 'ingreso' ? incomeCategories :sriExpenseCategories;
     
     // Buscar la categoría más cercana
     for (const category of categoriesList) {
