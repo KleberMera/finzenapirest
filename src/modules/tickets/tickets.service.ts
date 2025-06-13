@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 import { Injectable } from '@nestjs/common';
 
@@ -37,6 +38,149 @@ export class TicketsService {
     { name: 'Reembolsos', icon: 'pi pi-refresh', keywords: ['reembolso', 'devolución', 'retorno', 'reintegro'] },
     { name: 'Otros Ingresos', icon: 'pi pi-money-bill', keywords: ['otro', 'varios', 'misceláneo', 'regalo', 'herencia', 'premio'] }
   ];
+
+  // Palabras clave para identificar transacciones
+  private readonly transactionKeywords = [
+    'compra', 'gasto', 'pago', 'pagué', 'compré', 'gasté', 'factura', 'recibo',
+    'ingreso', 'cobro', 'cobré', 'recibí', 'me pagaron', 'transferencia', 'depósito',
+    'dólares', 'USD', '$', 'euros', '€', 'precio', 'costo', 'valor', 'monto',
+    'supermercado', 'tienda', 'restaurante', 'salario', 'sueldo', 'honorarios'
+  ];
+
+  // Palabras clave para identificar saludos
+  private readonly greetingKeywords = [
+    'hola', 'buenos días', 'buenas tardes', 'buenas noches', 'saludos', 'hey',
+    'qué tal', 'cómo estás', 'cómo vas', 'qué hay', 'qué onda', 'qué pasa'
+  ];
+
+  // Palabras clave para identificar preguntas sobre la identidad
+  private readonly identityKeywords = [
+    'quién eres', 'cómo te llamas', 'tu nombre', 'qué eres', 'qué haces',
+    'para qué sirves', 'qué puedes hacer', 'cuál es tu función', 'cuál es tu propósito'
+  ];
+
+  /**
+   * Procesa un texto del usuario y determina si es una transacción o una conversación
+   * @param userId ID del usuario
+   * @param text Texto enviado por el usuario
+   * @returns Respuesta procesada
+   */
+  async processTextTransaction(userId: number, text: string) {
+    // Normalizar el texto para facilitar la detección
+    const normalizedText = text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    
+    // Verificar si es un saludo o pregunta sobre identidad
+    const isGreeting = this.greetingKeywords.some(keyword => normalizedText.includes(keyword));
+    const isIdentityQuestion = this.identityKeywords.some(keyword => normalizedText.includes(keyword));
+    
+    // Si es un saludo o pregunta sobre identidad, manejar como conversación
+    if (isGreeting || isIdentityQuestion) {
+      return await this.handleConversation(userId, text);
+    }
+    
+    // Verificar si parece una transacción
+    const isLikelyTransaction = this.transactionKeywords.some(keyword => normalizedText.includes(keyword));
+    
+    // Si parece una transacción, procesarla como tal
+    if (isLikelyTransaction) {
+      return await this.processTransaction(userId, text);
+    }
+    
+    // Si no estamos seguros, preguntar a la IA si es una transacción
+    const isTransactionPrompt = `
+      Analiza el siguiente texto y determina si el usuario está intentando registrar una transacción financiera (ingreso o gasto).
+      Responde únicamente con "SI" o "NO".
+      
+      Texto: "${text}"
+    `;
+    
+    const isTransactionResponse = await this.generativeAIService.generateContent(isTransactionPrompt);
+    
+    // Si la IA detecta que es una transacción, procesarla
+    if (isTransactionResponse.trim().toUpperCase().includes('SI')) {
+      return await this.processTransaction(userId, text);
+    }
+    
+    // Si no es una transacción, manejar como conversación general
+    return await this.handleConversation(userId, text);
+  }
+  
+  /**
+   * Procesa un texto como una transacción financiera
+   * @param userId ID del usuario
+   * @param text Texto de la transacción
+   * @returns Transacción procesada
+   */
+  private async processTransaction(userId: number, text: string) {
+    // Generar el prompt para análisis de texto
+    const prompt = this.getTextAnalysisPrompt(text);
+    log('prompt', prompt);
+
+    // Pedir a la IA que analice el texto
+    const extractedText = await this.generativeAIService.generateContent(prompt);
+    log(extractedText);
+    
+    // Parsear la respuesta de la IA
+    const parsedData = this.parseExtractedText(extractedText);
+
+    // Crear o verificar categoría y transacción
+    const transaction = await this.saveTransaction(userId, parsedData);
+
+    return {
+      message: 'Transacción creada exitosamente',
+      transaction: transaction,
+      status: 200,
+      isTransaction: true
+    };
+  }
+  
+  /**
+   * Maneja una conversación general con el usuario
+   * @param userId ID del usuario
+   * @param text Texto del usuario
+   * @returns Respuesta conversacional
+   */
+  async handleConversation(userId: number, text: string) {
+    // Verificar si es la primera interacción del usuario
+    if (!this.hasConversationHistory(userId)) {
+      this.generativeAIService.initializeConversationContext(userId);
+    }
+    
+    // Generar respuesta conversacional
+    const response = await this.generativeAIService.chat(userId, text);
+    
+    return {
+      message: response,
+      status: 200,
+      isTransaction: false
+    };
+  }
+  
+  /**
+   * Verifica si existe historial de conversación para un usuario
+   * @param userId ID del usuario
+   * @returns true si existe historial, false en caso contrario
+   */
+  private hasConversationHistory(userId: number): boolean {
+    // Esta función debería verificar si hay historial de conversación
+    // Por ahora, simplemente inicializamos el contexto cada vez
+    return false;
+  }
+  
+  /**
+   * Reinicia la conversación con un usuario
+   * @param userId ID del usuario
+   * @returns Mensaje de confirmación
+   */
+   resetConversation(userId: number) {
+    this.generativeAIService.clearConversationHistory(userId);
+    this.generativeAIService.initializeConversationContext(userId);
+    
+    return {
+      message: 'Conversación reiniciada. ¿En qué puedo ayudarte hoy?',
+      status: 200
+    };
+  }
 
   // Método reutilizable para generar el prompt
   private getPromptTemplate(): string {
@@ -113,7 +257,7 @@ export class TicketsService {
     `;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
   private getReceiptPrompt(imagePath: string): string {
     return `
       Analiza la imagen del recibo proporcionada y extrae la siguiente información.
@@ -132,6 +276,7 @@ export class TicketsService {
       ${this.getPromptTemplate()}
     `;
   }
+  
   async processReceipt(userId: number, fileBuffer: Buffer, mimeType: string) {
     const prompt = this.getReceiptPrompt('Imagen en memoria');
   
@@ -168,28 +313,6 @@ export class TicketsService {
       throw new Error(`Error al procesar el recibo: ${error.message}`);
     }
   }
-
-  async processTextTransaction(userId: number, text: string) {
-    // Generar el prompt para análisis de texto
-    const prompt = this.getTextAnalysisPrompt(text);
-    log('prompt', prompt);
-
-    // Pedir a la IA que analice el texto
-    const extractedText = await this.generativeAIService.generateContent(prompt);
-    log(extractedText);
-    
-    // Parsear la respuesta de la IA
-    const parsedData = this.parseExtractedText(extractedText);
-
-    // Crear o verificar categoría y transacción
-    const transaction = await this.saveTransaction(userId, parsedData);
-
-    return {
-      message: 'Transacción creada exitosamente',
-      transaction: transaction,
-      status: 200
-    };
-  }
   
   async updateTransactionWithS3Key(transactionId: number, s3Key: string) {
     return await this.prisma.transaction.update({
@@ -211,7 +334,6 @@ export class TicketsService {
       date,
       time,
       categoryName,
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       icon,
       nameTransaction,
     } = parsedData;

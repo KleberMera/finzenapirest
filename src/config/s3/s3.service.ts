@@ -9,7 +9,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as path from 'path';
 import { format } from '@formkit/tempo';
-import { log } from 'console';
+
 
 @Injectable()
 export class S3Service {
@@ -67,37 +67,88 @@ export class S3Service {
     }
   }
 
-  // Subir un archivo a S3
-  async uploadFile(file: Express.Multer.File, userId: number): Promise<string> {
-    // Asegurar que la carpeta del usuario existe
-    await this.ensureUserFolderExists(userId);
-
-    // Formatear la fecha actual
-    const dateStr = format(new Date(), 'YYYY-MM-DD', 'es');
-
-    // Generar un timestamp único para evitar sobreescrituras
-    const timestamp = Date.now();
-
-    // Extraer la extensión del archivo original
-    const fileExt = path.extname(file.originalname);
-    log('fileExt', fileExt);
-
-    // Crear un nombre de archivo único con fecha + timestamp
-    const fileName = `user_${userId}/receipt_${dateStr}_${timestamp}${fileExt}`;
+  /**
+   * Sube un archivo a S3 usando un objeto Multer
+   * @param file Objeto Multer con el archivo a subir
+   * @param userId ID del usuario
+   * @returns Clave del archivo en S3
+   */
+  async uploadFile(fileOrBuffer: Express.Multer.File | Buffer, keyOrUserId: string | number, contentType?: string): Promise<string> {
+    let buffer: Buffer;
+    let fileName: string;
+    let mimeType: string;
+    
+    // Determinar si estamos recibiendo un archivo Multer o un buffer directamente
+    if (Buffer.isBuffer(fileOrBuffer)) {
+      // Es un buffer directo
+      buffer = fileOrBuffer;
+      
+      if (typeof keyOrUserId === 'number') {
+        // Si es un número, asumimos que es un userId y generamos una clave
+        const userId = keyOrUserId;
+        await this.ensureUserFolderExists(userId);
+        
+        // Formatear la fecha actual
+        const dateStr = format(new Date(), 'YYYY-MM-DD', 'es');
+        
+        // Generar un timestamp único para evitar sobreescrituras
+        const timestamp = Date.now();
+        
+        // Determinar la extensión basada en el tipo de contenido
+        let fileExt = '.jpg'; // Por defecto
+        if (contentType) {
+          if (contentType.includes('png')) fileExt = '.png';
+          else if (contentType.includes('jpeg') || contentType.includes('jpg')) fileExt = '.jpg';
+          else if (contentType.includes('pdf')) fileExt = '.pdf';
+          // Añadir más tipos según sea necesario
+        }
+        
+        fileName = `user_${userId}/receipt_${dateStr}_${timestamp}${fileExt}`;
+        mimeType = contentType || 'application/octet-stream';
+      } else {
+        // Si es una cadena, asumimos que es la clave directamente
+        fileName = keyOrUserId;
+        mimeType = contentType || 'application/octet-stream';
+      }
+    } else {
+      // Es un objeto Multer
+      const file = fileOrBuffer;
+      buffer = file.buffer;
+      mimeType = file.mimetype;
+      
+      if (typeof keyOrUserId === 'number') {
+        // Si es un número, asumimos que es un userId
+        const userId = keyOrUserId;
+        await this.ensureUserFolderExists(userId);
+        
+        // Formatear la fecha actual
+        const dateStr = format(new Date(), 'YYYY-MM-DD', 'es');
+        
+        // Generar un timestamp único para evitar sobreescrituras
+        const timestamp = Date.now();
+        
+        // Extraer la extensión del archivo original
+        const fileExt = path.extname(file.originalname);
+        
+        fileName = `user_${userId}/receipt_${dateStr}_${timestamp}${fileExt}`;
+      } else {
+        // Si es una cadena, asumimos que es la clave directamente
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+        fileName = keyOrUserId as string;
+      }
+    }
 
     this.logger.log('Subiendo archivo:', {
-      userId,
-      originalName: file.originalname,
       destinationPath: fileName,
-      fileSize: file.size,
-      mimeType: file.mimetype,
+      fileSize: buffer.length,
+      mimeType: mimeType,
     });
 
     const command = new PutObjectCommand({
       Bucket: this.bucket,
       Key: fileName,
-      Body: file.buffer,
-      ContentType: file.mimetype,
+      Body: buffer,
+      ContentType: mimeType,
     });
 
     await this.s3Client.send(command);
