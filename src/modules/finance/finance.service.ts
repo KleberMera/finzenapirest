@@ -14,9 +14,21 @@ export class FinanceService {
   ) {}
 
   async getFinancialSummary(userId: number, month: number, year: number) {
-    // 1. Obtener el último salario
+    //Comvertir a string en meses el numero de mes
+   
+    const formattedMonth = format({ date: new Date(year, month - 1, 1), format: 'MMMM' });
+    const monthParsed = formattedMonth.charAt(0).toUpperCase() + formattedMonth.slice(1);
+
+    // Obtener el salario del mes y año específicos
     const lastSalary = await this.prisma.salaryHistory.findFirst({
-      where: { user_id: userId },
+      where: { 
+        user_id: userId, 
+        month_name: monthParsed,
+        effective_date: {
+          gte: format({ date: new Date(year, 0, 1), format: 'YYYY-MM-DD' }),
+          lt: format({ date: new Date(year + 1, 0, 1), format: 'YYYY-MM-DD' }),
+        }
+      },
       orderBy: { effective_date: 'desc' },
     });
   
@@ -192,6 +204,155 @@ export class FinanceService {
         topVariableExpenses: topVariableExpenses,
         recommendation,
       }
+    };
+  }
+
+  // Nueva función para obtener resumen financiero por rango de fechas
+  async getFinancialSummaryRange(
+    userId: number, 
+    startMonth: number, 
+    startYear: number, 
+    endMonth: number = startMonth, 
+    endYear: number = startYear
+  ) {
+    // Crear fechas de inicio y fin para el rango
+    const startDate = new Date(startYear, startMonth - 1, 1);
+    const endDate = new Date(endYear, endMonth, 1); // Primer día del mes siguiente al final
+
+    // Preparar array para almacenar resultados mensuales
+    const monthlyResults = [];
+    
+    // Iterar por cada mes en el rango
+    const currentDate = new Date(startDate);
+    while (currentDate < endDate) {
+      const currentMonth = currentDate.getMonth() + 1;
+      const currentYear = currentDate.getFullYear();
+      
+      // Obtener el nombre del mes formateado
+      const formattedMonth = format({ date: currentDate, format: 'MMMM' });
+      const monthParsed = formattedMonth.charAt(0).toUpperCase() + formattedMonth.slice(1);
+      
+      // Calcular fecha de inicio y fin del mes actual
+      const monthStartDate = new Date(currentYear, currentMonth - 1, 1);
+      const monthEndDate = new Date(currentYear, currentMonth, 1);
+      
+      // 1. Obtener el salario del mes específico
+      const monthlySalary = await this.prisma.salaryHistory.findFirst({
+        where: { 
+          user_id: userId, 
+          month_name: monthParsed,
+          effective_date: {
+            gte: format({ date: new Date(currentYear, 0, 1), format: 'YYYY-MM-DD' }),
+            lt: format({ date: new Date(currentYear + 1, 0, 1), format: 'YYYY-MM-DD' }),
+          }
+        },
+        orderBy: { effective_date: 'desc' },
+      });
+      
+      // 2. Obtener transacciones del mes
+      const monthTransactions = await this.prisma.transaction.findMany({
+        where: {
+          category: { user_id: userId },
+          date: {
+            gte: format({ date: monthStartDate, format: 'YYYY-MM-DD' }),
+            lt: format({ date: monthEndDate, format: 'YYYY-MM-DD' }),
+          },
+        },
+        include: {
+          category: true,
+        },
+      });
+      
+      // 3. Separar transacciones por tipo
+      const incomeTransactions = monthTransactions.filter(tx => tx.category.type === 'Ingreso');
+      const expenseTransactions = monthTransactions.filter(tx => tx.category.type === 'Gasto');
+      
+      // 4. Obtener amortizaciones pagadas del mes
+      const amortizationsResult = await this.prisma.amortization.aggregate({
+        _sum: {
+          quota: true,
+        },
+        where: {
+          debt: {
+            user_id: userId,
+          },
+          payment_date: {
+            gte: format({ date: monthStartDate, format: 'YYYY-MM-DD' }),
+            lt: format({ date: monthEndDate, format: 'YYYY-MM-DD' }),
+          },
+          status: 'Pagado',
+        },
+      });
+      
+      // 5. Obtener contribuciones a metas del mes
+      const goalContribution = await this.prisma.goalContribution.aggregate({
+        _sum: {
+          amount: true,
+        },
+        where: {
+          goal: {
+            user_id: userId,
+          },
+          date: {
+            gte: format({ date: monthStartDate, format: 'YYYY-MM-DD' }),
+            lt: format({ date: monthEndDate, format: 'YYYY-MM-DD' }),
+          },
+        },
+      });
+      
+      // 6. Calcular totales
+      const totalDebtPaid = amortizationsResult._sum.quota?.toNumber() || 0;
+      const totalGoalContributionPaid = goalContribution._sum.amount?.toNumber() || 0;
+      
+      const salaryAmount = monthlySalary
+        ? parseFloat(monthlySalary.salary_amount.toString())
+        : 0;
+      const otherIncome = incomeTransactions.reduce(
+        (sum, tx) => sum + parseFloat(tx.amount.toString()),
+        0,
+      );
+      const totalIncome = salaryAmount + otherIncome;
+      const totalExpenses = expenseTransactions.reduce(
+        (sum, tx) => sum + parseFloat(tx.amount.toString()),
+        0,
+      );
+      
+      const totalExpensesWithDebtAndGoals = totalExpenses + totalDebtPaid + totalGoalContributionPaid;
+
+      const expensePercentage =
+      totalIncome > 0 ? (totalExpensesWithDebtAndGoals / totalIncome) * 100 : 0;
+      
+      // 7. Añadir resultados del mes al array solo si hay datos
+      if (totalIncome > 0 || totalExpensesWithDebtAndGoals > 0) {
+        monthlyResults.push({
+          month: currentMonth,
+          year: currentYear,
+          monthName: monthParsed,
+          totalIncome: totalIncome,
+          salaryAmount: salaryAmount,
+          otherIncome: otherIncome,
+          totalExpenses: totalExpenses,
+          totalDebtPaid: totalDebtPaid,
+          totalGoalContributionPaid: totalGoalContributionPaid,
+          totalExpensesWithDebtAndGoals: totalExpensesWithDebtAndGoals,
+          netBalance: (totalIncome - totalExpensesWithDebtAndGoals),
+          expensePercentage: expensePercentage,
+        });
+      }
+      
+      // Avanzar al siguiente mes
+      currentDate.setMonth(currentDate.getMonth() + 1);
+    }
+    
+    // Ordenar resultados por fecha (mes-año)
+    monthlyResults.sort((a, b) => {
+      if (a.year !== b.year) return a.year - b.year;
+      return a.month - b.month;
+    });
+    
+    return {
+      message: 'Financial summary range generated successfully',
+      data: monthlyResults
     };
   }
 

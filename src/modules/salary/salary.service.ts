@@ -78,26 +78,29 @@ export class SalaryService {
    * Listar salario por mes actual o mes específico
    * Devuelve el salario de un usuario para un mes dado o el mes actual si no se especifica.
    */
-  async getSalaryByMonth(userId: number, month?: string) {
-    const currentMonth =
-      month || new Date().toLocaleString('default', { month: 'long' });
-  
-    const salary = await this.prisma.salaryHistory.findFirst({
-      where: {
-        user_id: userId,
-        month_name: currentMonth,
-      },
-      orderBy: {
-        createdAt: 'desc', // Ordenar por effective_date descendente
-      },
-    });
+  async getSalaryByMonth(userId: number, month: number, year: number) {
+    log(month, year);
+    const formattedMonth = format({ date: new Date(year, month - 1, 1), format: 'MMMM' });
+    const monthParsed = formattedMonth.charAt(0).toUpperCase() + formattedMonth.slice(1);
 
+    // Obtener el salario del mes y año específicos
+    const lastSalary = await this.prisma.salaryHistory.findFirst({
+      where: { 
+        user_id: userId, 
+        month_name: monthParsed,
+        effective_date: {
+          gte: format({ date: new Date(year, 0, 1), format: 'YYYY-MM-DD' }),
+          lt: format({ date: new Date(year + 1, 0, 1), format: 'YYYY-MM-DD' }),
+        }
+      },
+      orderBy: { effective_date: 'desc' },
+    });
     
     
   
     return {
       message: 'Salario obtenido correctamente',
-      data: salary,
+      data: lastSalary,
       status: 200,
     };
   }

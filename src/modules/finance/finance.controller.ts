@@ -21,6 +21,22 @@ export class FinanceController {
     );
   }
 
+  @Post('summary/range/:userId')
+  async getFinancialSummaryRange(
+    @Param('userId') userId: string,
+    @Body('startMonth') startMonth: number,
+    @Body('startYear') startYear: number,
+    @Body('endMonth') endMonth?: number,
+    @Body('endYear') endYear?: number,
+  ) {
+    return this.financeService.getFinancialSummaryRange(
+      Number(userId),
+      Number(startMonth),
+      Number(startYear),
+      endMonth ? Number(endMonth) : undefined,
+      endYear ? Number(endYear) : undefined,
+    );
+  }
 
   @Post('summary/ai/:userId')
   async getFinancialSummaryAI(
