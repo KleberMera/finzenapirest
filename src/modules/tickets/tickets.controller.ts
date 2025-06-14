@@ -2,7 +2,7 @@ import { Body, Controller, HttpException, HttpStatus, Param, Post, UploadedFile,
 import { FileInterceptor } from '@nestjs/platform-express';
 import { TicketsService } from './tickets.service';
 import { S3Service } from 'src/config/s3/s3.service';
-import { log } from 'console';
+
 
 @Controller('tickets')
 export class TicketsController {
@@ -12,30 +12,88 @@ export class TicketsController {
   ) {}
 
   @Post('process-text/:userId')
-  async processText(@Param('userId') userId: string, @Body() body: { text: string }) {
-    log(userId);
-    log(body);
+  async processText(
+    @Param('userId') userId: string,
+    @Body() body: { text: string, multipleMode?: boolean },
+  ) {
     try {
-      // Validar que el userId sea un número
-      const userIdNum = parseInt(userId, 10);
-      if (isNaN(userIdNum)) {
-        throw new HttpException('ID de usuario inválido', HttpStatus.BAD_REQUEST);
+      // Validar el ID de usuario
+      const userIdNumber = parseInt(userId, 10);
+      if (isNaN(userIdNumber)) {
+        throw new Error('ID de usuario no válido');
       }
 
-      // Validar que el texto no esté vacío
-      if (!body.text || body.text.trim() === '') {
-        throw new HttpException('El texto no puede estar vacío', HttpStatus.BAD_REQUEST);
+      // Validar el texto
+      if (!body.text || body.text.trim().length === 0) {
+        throw new Error('No se ha proporcionado ningún texto');
       }
+
+      // Extraer parámetros adicionales
+      const multipleMode = body.multipleMode || false;
 
       // Procesar el texto
-      const result = await this.ticketsService.processTextTransaction(userIdNum, body.text);
-      return result;
+      const result = await this.ticketsService.processTextTransaction(
+        userIdNumber,
+        body.text,
+        multipleMode
+      );
+
+      return {
+        ...result,
+        status: 200,
+      };
     } catch (error) {
       console.error('Error al procesar el texto:', error);
-      throw new HttpException(
-        error.message || 'Error al procesar el texto',
-        error.status || HttpStatus.INTERNAL_SERVER_ERROR
-      );
+      return {
+        message: error.message,
+        status: 400,
+      };
+    }
+  }
+
+  @Post('confirm-transactions/:userId')
+  async confirmTransactions(
+    @Param('userId') userId: string,
+    @Body() body: { transactions: any[], receiptImageS3Key?: string }
+  ) {
+    try {
+      // Validar el ID de usuario
+      const userIdNumber = parseInt(userId, 10);
+      if (isNaN(userIdNumber)) {
+        throw new Error('ID de usuario no válido');
+      }
+
+      // Validar las transacciones
+      if (!body.transactions || !Array.isArray(body.transactions) || body.transactions.length === 0) {
+        throw new Error('No se han proporcionado transacciones para confirmar');
+      }
+
+      // Guardar cada transacción confirmada
+      const savedTransactions = [];
+      for (const transactionData of body.transactions) {
+        // Guardar la transacción
+        const transaction = await this.ticketsService.saveTransaction(userIdNumber, transactionData);
+        
+        // Si hay una clave S3 para la imagen del recibo, actualizar todas las transacciones con ella
+        if (body.receiptImageS3Key) {
+          await this.ticketsService.updateTransactionWithS3Key(transaction.id, body.receiptImageS3Key);
+          transaction.receiptImageS3Key = body.receiptImageS3Key;
+        }
+        
+        savedTransactions.push(transaction);
+      }
+
+      return {
+        message: 'Transacciones confirmadas y guardadas exitosamente',
+        transactions: savedTransactions,
+        status: 200,
+      };
+    } catch (error) {
+      console.error('Error al confirmar las transacciones:', error);
+      return {
+        message: error.message,
+        status: 400,
+      };
     }
   }
 
@@ -43,56 +101,81 @@ export class TicketsController {
   @UseInterceptors(FileInterceptor('file'))
   async processReceipt(
     @Param('userId') userId: string,
-    @UploadedFile() file: Express.Multer.File
+    @UploadedFile() file: Express.Multer.File,
+    @Body() body: { additionalText?: string, multipleMode?: boolean }
   ) {
     try {
-      // Validar que el userId sea un número
-      const userIdNum = parseInt(userId, 10);
-      if (isNaN(userIdNum)) {
-        throw new HttpException('ID de usuario inválido', HttpStatus.BAD_REQUEST);
+      // Validar el ID de usuario
+      const userIdNumber = parseInt(userId, 10);
+      if (isNaN(userIdNumber)) {
+        throw new Error('ID de usuario no válido');
       }
 
-      // Validar que se haya subido un archivo
+      // Validar el archivo
       if (!file) {
-        throw new HttpException('No se ha proporcionado ningún archivo', HttpStatus.BAD_REQUEST);
+        throw new Error('No se ha proporcionado ningún archivo');
       }
 
-      // Validar que el archivo sea una imagen
-      if (!file.mimetype.startsWith('image/')) {
-        throw new HttpException('El archivo debe ser una imagen', HttpStatus.BAD_REQUEST);
+      // Validar el tipo de archivo
+      const validMimeTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
+      if (!validMimeTypes.includes(file.mimetype)) {
+        throw new Error('Tipo de archivo no válido. Se aceptan JPG, PNG y PDF');
       }
+
+      // Extraer parámetros adicionales
+      const additionalText = body.additionalText || '';
+      const multipleMode = body.multipleMode || false;
 
       // Procesar el recibo
-      const transaction = await this.ticketsService.processReceipt(userIdNum, file.buffer, file.mimetype);
+      const result = await this.ticketsService.processReceipt(
+        userIdNumber,
+        file.buffer,
+        file.mimetype,
+        additionalText,
+        multipleMode
+      );
+
+      // Verificar si se detectaron múltiples transacciones
+      if (multipleMode && result.isMultiple && result.transactions) {
+        // Devolver las transacciones para confirmación
+        return {
+          message: 'Se han detectado múltiples transacciones',
+          transactions: result.transactions,
+          isMultiple: true,
+          status: 200,
+        };
+      }
+
+      // Caso de una sola transacción
+      const transaction = result.transaction;
 
       // Intentar subir la imagen a S3
       try {
-        const s3Key = `receipts/${userIdNum}/${transaction.id}_${Date.now()}.jpg`;
+        const s3Key = `receipts/${userIdNumber}/${transaction.id}_${Date.now()}.jpg`;
         await this.s3Service.uploadFile(file.buffer, s3Key, file.mimetype);
         
         // Actualizar la transacción con la clave de S3
+
+        //const s3Key = await this.s3Service.uploadFile(userIdNumber, file);
+        // Actualizar la transacción con la clave S3
         await this.ticketsService.updateTransactionWithS3Key(transaction.id, s3Key);
-        
-        return {
-          message: 'Recibo procesado exitosamente',
-          transaction: transaction,
-          status: 200
-        };
+        transaction.receiptImageS3Key = s3Key;
       } catch (s3Error) {
         console.error('Error al subir la imagen a S3:', s3Error);
-        // Aún si falla la subida a S3, devolvemos la transacción
-        return {
-          message: 'Recibo procesado exitosamente, pero no se pudo guardar la imagen',
-          transaction: transaction,
-          status: 200
-        };
+        // Continuamos con la transacción aunque la subida a S3 haya fallado
       }
+
+      return {
+        message: 'Recibo procesado exitosamente',
+        transaction,
+        status: 200,
+      };
     } catch (error) {
       console.error('Error al procesar el recibo:', error);
-      throw new HttpException(
-        error.message || 'Error al procesar el recibo',
-        error.status || HttpStatus.INTERNAL_SERVER_ERROR
-      );
+      return {
+        message: error.message,
+        status: 400,
+      };
     }
   }
   

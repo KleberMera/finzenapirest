@@ -39,6 +39,5 @@
   // Palabras clave para identificar preguntas sobre la identidad
   export const identityKeywords = [
     'quién eres', 'cómo te llamas', 'tu nombre', 'qué eres', 'qué haces',
-    'para qué sirves', 'qué puedes hacer', 'cuál es tu función', 'cuál es tu propósito',
-    'puedes registrar una transacción', 'puedes registrar un ingreso', 'puedes registrar un gasto',
+    'para qué sirves', 'qué puedes hacer', 'cuál es tu función', 'cuál es tu propósito'
   ];

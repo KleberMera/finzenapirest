@@ -20,7 +20,7 @@ export class TicketsService {
    * @param text Texto enviado por el usuario
    * @returns Respuesta procesada
    */
-  async processTextTransaction(userId: number, text: string) {
+  async processTextTransaction(userId: number, text: string, multipleMode: boolean = false) {
     // Normalizar el texto para facilitar la detección
     const normalizedText = text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     
@@ -38,7 +38,7 @@ export class TicketsService {
     
     // Si parece una transacción, procesarla como tal
     if (isLikelyTransaction) {
-      return await this.processTransaction(userId, text);
+      return await this.processTransaction(userId, text, multipleMode);
     }
     
     // Si no estamos seguros, preguntar a la IA si es una transacción
@@ -53,7 +53,7 @@ export class TicketsService {
     
     // Si la IA detecta que es una transacción, procesarla
     if (isTransactionResponse.trim().toUpperCase().includes('SI')) {
-      return await this.processTransaction(userId, text);
+      return await this.processTransaction(userId, text, multipleMode);
     }
     
     // Si no es una transacción, manejar como conversación general
@@ -66,16 +66,46 @@ export class TicketsService {
    * @param text Texto de la transacción
    * @returns Transacción procesada
    */
-  private async processTransaction(userId: number, text: string) {
+  private async processTransaction(userId: number, text: string, multipleMode: boolean = false) {
     // Generar el prompt para análisis de texto
-    const prompt = this.getTextAnalysisPrompt(text);
+    let prompt;
+    
+    if (multipleMode) {
+      // Prompt específico para detectar múltiples transacciones
+      prompt = this.getMultipleTransactionsPrompt(text);
+    } else {
+      // Prompt estándar para una sola transacción
+      prompt = this.getTextAnalysisPrompt(text);
+    }
+    
     log('prompt', prompt);
 
     // Pedir a la IA que analice el texto
     const extractedText = await this.generativeAIService.generateContent(prompt);
     log(extractedText);
     
-    // Parsear la respuesta de la IA
+    if (multipleMode) {
+      try {
+        // Intentar parsear múltiples transacciones
+        const multipleTransactions = this.parseMultipleTransactions(extractedText);
+        
+        if (multipleTransactions && multipleTransactions.length > 0) {
+          // Si se detectaron múltiples transacciones, devolverlas para confirmación
+          return {
+            message: 'Se han detectado múltiples transacciones',
+            transactions: multipleTransactions,
+            status: 200,
+            isTransaction: true,
+            isMultiple: true
+          };
+        }
+      } catch (error) {
+        console.log('Error al parsear múltiples transacciones, procesando como una sola:', error);
+        // Si hay error en el parseo múltiple, continuamos con el procesamiento normal
+      }
+    }
+    
+    // Parsear la respuesta de la IA como una sola transacción
     const parsedData = this.parseExtractedText(extractedText);
 
     // Crear o verificar categoría y transacción
@@ -85,7 +115,8 @@ export class TicketsService {
       message: 'Transacción creada exitosamente',
       transaction: transaction,
       status: 200,
-      isTransaction: true
+      isTransaction: true,
+      isMultiple: false
     };
   }
   
@@ -213,11 +244,12 @@ export class TicketsService {
   }
 
 
-  private getReceiptPrompt(imagePath: string): string {
+  private getReceiptPrompt(imagePath: string, additionalText: string = ''): string {
     return `
       Analiza la imagen del recibo proporcionada y extrae la siguiente información.
       Presta especial atención a los detalles para clasificar correctamente según el tipo de transacción (ingreso o gasto) y su categoría específica:
       ${this.getPromptTemplate()}
+      ${additionalText ? `\nInformación adicional proporcionada por el usuario: "${additionalText}"\nUtiliza esta información para complementar o corregir los datos extraídos de la imagen.` : ''}
     `;
   }
 
@@ -232,9 +264,7 @@ export class TicketsService {
     `;
   }
   
-  async processReceipt(userId: number, fileBuffer: Buffer, mimeType: string) {
-    const prompt = this.getReceiptPrompt('Imagen en memoria');
-  
+  async processReceipt(userId: number, fileBuffer: Buffer, mimeType: string, additionalText: string = '', multipleMode: boolean = false) {
     // Validar el tamaño del archivo
     if (fileBuffer.length === 0) {
       throw new Error('El archivo está vacío o no contiene datos');
@@ -246,6 +276,14 @@ export class TicketsService {
     try {
       const base64Data = fileBuffer.toString('base64');
       console.log(`Inicio de base64: ${base64Data.substring(0, 100)}...`);
+      
+      // Seleccionar el prompt adecuado según el modo
+      let prompt;
+      if (multipleMode) {
+        prompt = this.getMultipleReceiptPrompt('Imagen en memoria', additionalText);
+      } else {
+        prompt = this.getReceiptPrompt('Imagen en memoria', additionalText);
+      }
   
       const extractedText = await this.generativeAIService.analyzeImageBase(base64Data, mimeType, prompt);
       
@@ -254,6 +292,36 @@ export class TicketsService {
         throw new Error('No se pudo extraer información del recibo. La imagen podría estar borrosa o no contener texto legible.');
       }
       
+      if (multipleMode) {
+        try {
+          // Intentar parsear múltiples transacciones
+          const multipleTransactions = this.parseMultipleTransactions(extractedText);
+          
+          if (multipleTransactions && multipleTransactions.length > 0) {
+            // Preparar las transacciones para devolverlas (sin guardarlas aún)
+            const transactionsData = [];
+            
+            for (const transactionData of multipleTransactions) {
+              // Validar los datos parseados
+              if (this.isValidTransactionData(transactionData)) {
+                transactionsData.push(transactionData);
+              }
+            }
+            
+            if (transactionsData.length > 0) {
+              return {
+                transactions: transactionsData,
+                isMultiple: true
+              };
+            }
+          }
+        } catch (error) {
+          console.log('Error al parsear múltiples transacciones, procesando como una sola:', error);
+          // Si hay error en el parseo múltiple, continuamos con el procesamiento normal
+        }
+      }
+      
+      // Procesamiento para una sola transacción
       const parsedData = this.parseExtractedText(extractedText);
       
       // Validar los datos parseados
@@ -262,7 +330,12 @@ export class TicketsService {
       }
   
       console.log('Información extraída:', parsedData);
-      return await this.saveTransaction(userId, parsedData);
+      const transaction = await this.saveTransaction(userId, parsedData);
+      
+      return {
+        transaction: transaction,
+        isMultiple: false
+      };
     } catch (error) {
       console.error('Error al procesar el recibo:', error);
       throw new Error(`Error al procesar el recibo: ${error.message}`);
@@ -276,7 +349,7 @@ export class TicketsService {
     });
   }
    
-  private async saveTransaction(userId: number, parsedData: any, s3Key?: string) {
+  async saveTransaction(userId: number, parsedData: any, s3Key?: string) {
     // Validar que los datos requeridos estén presentes
     if (!parsedData) {
       throw new Error('No se proporcionaron datos para guardar la transacción');
@@ -333,7 +406,7 @@ export class TicketsService {
         amount: parseFloat(amount),
         date,
         time,
-        receiptImageS3Key: s3Key,
+        receiptImageS3Key: s3Key ?? 'Transaccion generada por IA',
       },
       include: {
         category: true // Incluir los datos de la categoría relacionada
@@ -390,6 +463,199 @@ export class TicketsService {
     
     // La transacción es válida si tiene ítems válidos O un monto válido
     return hasValidItems || hasValidAmount;
+  }
+  
+  /**
+   * Genera un prompt para detectar múltiples transacciones en un texto
+   * @param userText Texto del usuario
+   * @returns Prompt para la IA
+   */
+  private getMultipleTransactionsPrompt(userText: string): string {
+    return `
+      Analiza el siguiente texto de un usuario y extrae TODAS las transacciones financieras que puedas identificar.
+      El texto puede contener una o múltiples transacciones. Debes identificar cada transacción por separado.
+      
+      Texto: "${userText}"
+      
+      Para cada transacción identificada, extrae la siguiente información:
+      ${this.getPromptTemplate()}
+      
+      Si identificas múltiples transacciones, devuelve un array JSON con todas las transacciones encontradas:
+      
+      [
+        {
+          "items": [...],
+          "amount": "...",
+          "description": "...",
+          "type": "...",
+          "date": "...",
+          "time": "...",
+          "categoryName": "...",
+          "icon": "...",
+          "nameTransaction": "..."
+        },
+        {
+          "items": [...],
+          "amount": "...",
+          "description": "...",
+          "type": "...",
+          "date": "...",
+          "time": "...",
+          "categoryName": "...",
+          "icon": "...",
+          "nameTransaction": "..."
+        }
+      ]
+      
+      Si solo identificas una transacción, devuelve un objeto JSON simple.
+    `;
+  }
+  
+  /**
+   * Genera un prompt para detectar múltiples transacciones en una imagen de recibo
+   * @param imagePath Ruta o descripción de la imagen
+   * @param additionalText Texto adicional proporcionado por el usuario
+   * @returns Prompt para la IA
+   */
+  private getMultipleReceiptPrompt(imagePath: string, additionalText: string = ''): string {
+    let additionalContext = '';
+    if (additionalText && additionalText.trim().length > 0) {
+      additionalContext = `\n\nInformación adicional proporcionada por el usuario:\n"${additionalText}"\n\nUtiliza esta información adicional para complementar o corregir los datos extraídos de la imagen.`;
+    }
+    
+    return `
+      Analiza la imagen del recibo proporcionada y extrae TODAS las transacciones financieras que puedas identificar.
+      La imagen puede contener una o múltiples transacciones. Debes identificar cada transacción por separado.${additionalContext}
+      
+      Para cada transacción identificada, extrae la siguiente información:
+      ${this.getPromptTemplate()}
+      
+      Si identificas múltiples transacciones, devuelve un array JSON con todas las transacciones encontradas:
+      
+      [
+        {
+          "items": [...],
+          "amount": "...",
+          "description": "...",
+          "type": "...",
+          "date": "...",
+          "time": "...",
+          "categoryName": "...",
+          "icon": "...",
+          "nameTransaction": "..."
+        },
+        {
+          "items": [...],
+          "amount": "...",
+          "description": "...",
+          "type": "...",
+          "date": "...",
+          "time": "...",
+          "categoryName": "...",
+          "icon": "...",
+          "nameTransaction": "..."
+        }
+      ]
+      
+      Si solo identificas una transacción, devuelve un objeto JSON simple.
+    `;
+  }
+  
+  /**
+   * Parsea el texto extraído por la IA para obtener múltiples transacciones
+   * @param text Texto extraído por la IA
+   * @returns Array de transacciones
+   */
+  private parseMultipleTransactions(text: string): any[] {
+    // Verificar si el texto está vacío
+    if (!text || text.trim().length === 0) {
+      throw new Error('No se recibió respuesta de la IA o la respuesta está vacía.');
+    }
+    
+    // Intentar extraer el JSON de la respuesta
+    const jsonMatch = text.match(/\[\s*\{[\s\S]*\}\s*\]/); // Buscar un array JSON
+    
+    if (!jsonMatch) {
+      // Si no se encuentra un array, intentar extraer un objeto JSON simple
+      const singleJsonMatch = text.match(/\{[\s\S]*\}/);
+      if (singleJsonMatch) {
+        // Si se encuentra un objeto JSON simple, procesarlo como una sola transacción
+        const singleTransaction = this.parseExtractedText(text);
+        return [singleTransaction];
+      }
+      throw new Error('El formato de la respuesta de la IA no es válido. No se encontró un objeto JSON.');
+    }
+    
+    try {
+      const data = JSON.parse(jsonMatch[0]);
+      
+      if (!Array.isArray(data)) {
+        throw new Error('La respuesta no contiene un array de transacciones.');
+      }
+      
+      // Procesar cada transacción en el array
+      const transactions = [];
+      const l = "es";
+      const t = new Date();
+      const datenew = format(t, "YYYY-MM-DD", l);
+      const timenew = format(t, "hh:mm:ss", l);
+      
+      for (const item of data) {
+        // Determinar el tipo de transacción
+        const transactionType = (item.type || 'gasto').toLowerCase();
+        
+        // Validar que el tipo sea 'ingreso' o 'gasto'
+        if (transactionType !== 'ingreso' && transactionType !== 'gasto') {
+          console.warn('Tipo de transacción no válido. Debe ser "ingreso" o "gasto". Se omitirá esta transacción.');
+          continue;
+        }
+        
+        // Validar la categoría antes de devolverla
+        const categoryInfo = this.validateCategory(
+          item.categoryName || (transactionType === 'ingreso' ? 'Otros Ingresos' : 'Otros Gastos'), 
+          transactionType
+        );
+        
+        // Validar y formatear el monto
+        let amount = '0';
+        if (item.amount) {
+          const amountValue = parseFloat(item.amount);
+          if (!isNaN(amountValue) && amountValue >= 0) {
+            amount = amountValue.toString();
+          }
+        }
+        
+        // Validar y formatear los ítems
+        let items = [];
+        if (Array.isArray(item.items)) {
+          items = item.items
+            .filter((subItem: any) => subItem && subItem.name && subItem.quantity && subItem.unitPrice)
+            .map((subItem: any) => ({
+              name: subItem.name.toString().trim(),
+              quantity: subItem.quantity.toString().trim(),
+              unitPrice: subItem.unitPrice.toString().trim()
+            }));
+        }
+        
+        transactions.push({
+          items,
+          amount,
+          description: item.description ? item.description.toString().trim() : 'Sin descripción',
+          type: transactionType,
+          date: item.date || datenew,
+          time: item.time || timenew,
+          categoryName: categoryInfo.name,
+          icon: categoryInfo.icon,
+          nameTransaction: item.nameTransaction ? item.nameTransaction.toString().trim() : 'Transacción sin nombre',
+        });
+      }
+      
+      return transactions;
+      
+    } catch (error) {
+      console.error('Error al parsear la respuesta de la IA para múltiples transacciones:', error);
+      throw new Error(`Error al procesar la información de múltiples transacciones: ${error.message}`);
+    }
   }
 
   private parseExtractedText(text: string): {
