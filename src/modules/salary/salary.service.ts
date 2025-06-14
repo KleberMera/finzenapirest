@@ -80,7 +80,7 @@ export class SalaryService {
    */
   async getSalaryByMonth(userId: number, month: number, year: number) {
     log(month, year);
-    const formattedMonth = format({ date: new Date(year, month - 1, 1), format: 'MMMM' });
+    const formattedMonth = format({ date: new Date(year, month - 1, 1), format: 'MMMM' , tz: 'America/Guayaquil' });
     const monthParsed = formattedMonth.charAt(0).toUpperCase() + formattedMonth.slice(1);
 
     // Obtener el salario del mes y año específicos

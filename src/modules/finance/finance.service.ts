@@ -16,7 +16,7 @@ export class FinanceService {
   async getFinancialSummary(userId: number, month: number, year: number) {
     //Comvertir a string en meses el numero de mes
    
-    const formattedMonth = format({ date: new Date(year, month - 1, 1), format: 'MMMM' });
+    const formattedMonth = format({ date: new Date(year, month - 1, 1), format: 'MMMM', tz: 'America/Guayaquil' });
     const monthParsed = formattedMonth.charAt(0).toUpperCase() + formattedMonth.slice(1);
 
     // Obtener el salario del mes y año específicos
