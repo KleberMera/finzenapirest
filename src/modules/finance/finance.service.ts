@@ -16,7 +16,7 @@ export class FinanceService {
   async getFinancialSummary(userId: number, month: number, year: number) {
     //Comvertir a string en meses el numero de mes
    
-    const formattedMonth = format({ date: new Date(year, month - 1, 1), format: 'MMMM', tz: 'America/Guayaquil' });
+    const formattedMonth = format({ date: new Date(year, month - 1, 1), format: 'MMMM', locale: 'es' });
     const monthParsed = formattedMonth.charAt(0).toUpperCase() + formattedMonth.slice(1);
     log('Mes Parsed:', monthParsed);
 
@@ -231,7 +231,7 @@ export class FinanceService {
       const currentYear = currentDate.getFullYear();
       
       // Obtener el nombre del mes formateado
-      const formattedMonth = format({ date: currentDate, format: 'MMMM' , tz: 'America/Guayaquil' });
+      const formattedMonth = format({ date: currentDate, format: 'MMMM' , locale: 'es' });
       const monthParsed = formattedMonth.charAt(0).toUpperCase() + formattedMonth.slice(1);
       log('Mes Parsed:', monthParsed);
       
@@ -360,9 +360,14 @@ export class FinanceService {
   }
 
   async getFinancialSummaryAI(userId: number, month: number, year: number) {
+        const formattedMonth = format({ date: new Date(year, month - 1, 1), format: 'MMMM', locale: 'es' });
+    const monthParsed = formattedMonth.charAt(0).toUpperCase() + formattedMonth.slice(1);
     // 1. Obtener el último salario
     const lastSalary = await this.prisma.salaryHistory.findFirst({
-      where: { user_id: userId },
+      where: { user_id: userId , month_name: monthParsed, effective_date: {
+            gte: format({ date: new Date(year, 0, 1), format: 'YYYY-MM-DD' }),
+            lt: format({ date: new Date(year + 1, 0, 1), format: 'YYYY-MM-DD' }),
+          }},
       orderBy: { effective_date: 'desc' },
     });
   
@@ -486,41 +491,42 @@ export class FinanceService {
   
     // 14. Crear un prompt mejorado para la IA
     const prompt = `
-      Soy tu asistente financiero personal. Analizaré tu situación financiera del mes ${month}/${year}:
-  
-      RESUMEN FINANCIERO COMPLETO:
-      - Ingresos totales: $${totalIncome.toFixed(2)} (Salario: $${salaryAmount.toFixed(2)} + Otros: $${otherIncome.toFixed(2)})
-      - Gastos variables: $${totalExpenses.toFixed(2)}
-      - Pagos de deuda: $${totalDebtPaid.toFixed(2)}
-      - Contribuciones a metas: $${totalGoalContributionPaid.toFixed(2)}
-      - TOTAL GASTADO: $${totalExpensesWithDebtAndGoals.toFixed(2)} (${expensePercentage.toFixed(2)}% de ingresos)
-      - Saldo restante: $${(totalIncome - totalExpensesWithDebtAndGoals).toFixed(2)}
-  
-      ANÁLISIS TEMPORAL:
-      - Ha transcurrido el ${daysPassedPercentage.toFixed(2)}% del mes
-      - Gastos esperados según tiempo: $${expectedExpensesByTime.toFixed(2)}
-      - Tu ritmo de gastos actual: ${timeAdjustedExpensePercentage.toFixed(2)}% (>100% = gastas más rápido de lo ideal)
-  
-      COMPROMISOS FINANCIEROS:
-      - Pagos de deuda del mes: $${totalDebtPaid.toFixed(2)} (${totalDebtPaid > 0 ? 'compromiso fijo positivo' : 'sin pagos'})
-      - Metas de ahorro del mes: $${totalGoalContributionPaid.toFixed(2)} (${totalGoalContributionPaid > 0 ? 'compromiso positivo' : 'sin contribuciones'})
-  
-      TOP CATEGORÍAS DE GASTOS VARIABLES:
-      ${JSON.stringify(topVariableExpenses, null, 2)}
-  
-      DETALLE DE GASTOS VARIABLES:
-      ${JSON.stringify(formattedExpenses, null, 2)}
-  
-      IMPORTANTE: Los pagos de deuda y contribuciones a metas son compromisos financieros positivos, NO son gastos problemáticos.
-  
-      Proporciona un análisis que incluya:
-      1. Evaluación del ritmo de gastos considerando que tienes compromisos financieros importantes
-      2. Identificación de patrones en gastos variables (categorías donde puedes optimizar)
-      3. Recomendación específica que distinga entre gastos controlables vs compromisos fijos
-      4. Una perspectiva positiva sobre el manejo de deudas y metas si aplica
-  
-      Mantén el análisis conciso, práctico y motivador.
+    Soy tu asistente financiero personal. Elaboraré un reporte de tu situación financiera del mes ${month}/${year}:
+
+    RESUMEN FINANCIERO COMPLETO:
+    - Ingresos totales: $${totalIncome.toFixed(2)} (Salario: $${salaryAmount.toFixed(2)} + Otros: $${otherIncome.toFixed(2)})
+    - Gastos variables: $${totalExpenses.toFixed(2)}
+    - Pagos de deuda: $${totalDebtPaid.toFixed(2)}
+    - Contribuciones a metas: $${totalGoalContributionPaid.toFixed(2)}
+    - TOTAL GASTADO: $${totalExpensesWithDebtAndGoals.toFixed(2)} (${expensePercentage.toFixed(2)}% de ingresos)
+    - Saldo restante: $${(totalIncome - totalExpensesWithDebtAndGoals).toFixed(2)}
+
+    SEGUIMIENTO DEL MES:
+    - Ha transcurrido el ${daysPassedPercentage.toFixed(2)}% del mes
+    - Gastos esperados según el avance del mes: $${expectedExpensesByTime.toFixed(2)}
+    - Ritmo actual de gastos: ${timeAdjustedExpensePercentage.toFixed(2)}% (>100% indica gasto más rápido de lo ideal)
+
+    COMPROMISOS FINANCIEROS:
+    - Pagos de deuda: $${totalDebtPaid.toFixed(2)} (${totalDebtPaid > 0 ? 'compromiso cumplido' : 'sin pagos en el mes'})
+    - Aportes a metas de ahorro: $${totalGoalContributionPaid.toFixed(2)} (${totalGoalContributionPaid > 0 ? 'aporte realizado' : 'sin aportes en el mes'})
+
+    CATEGORÍAS DE GASTOS VARIABLES MÁS RELEVANTES:
+    ${JSON.stringify(topVariableExpenses, null, 2)}
+
+    DETALLE DE GASTOS VARIABLES:
+    ${JSON.stringify(formattedExpenses, null, 2)}
+
+    NOTA: Los pagos de deuda y aportes a metas son compromisos positivos y no se consideran gastos problemáticos.
+
+    Genera un reporte con:
+    1. Un breve comentario sobre el ritmo de gastos según el avance del mes.
+    2. Mención de las categorías con mayor gasto variable.
+    3. Sugerencia práctica si se observa alguna categoría donde podría haber margen de ajuste.
+    4. Breve comentario positivo sobre los pagos de deuda y aportes realizados.
+
+    El reporte debe ser claro, breve, descriptivo y motivador.
     `;
+
   
     log(prompt);
   
