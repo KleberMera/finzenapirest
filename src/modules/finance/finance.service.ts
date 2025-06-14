@@ -18,6 +18,8 @@ export class FinanceService {
    
     const formattedMonth = format({ date: new Date(year, month - 1, 1), format: 'MMMM', tz: 'America/Guayaquil' });
     const monthParsed = formattedMonth.charAt(0).toUpperCase() + formattedMonth.slice(1);
+    log('Mes Parsed:', monthParsed);
+
 
     // Obtener el salario del mes y año específicos
     const lastSalary = await this.prisma.salaryHistory.findFirst({
@@ -231,6 +233,7 @@ export class FinanceService {
       // Obtener el nombre del mes formateado
       const formattedMonth = format({ date: currentDate, format: 'MMMM' , tz: 'America/Guayaquil' });
       const monthParsed = formattedMonth.charAt(0).toUpperCase() + formattedMonth.slice(1);
+      log('Mes Parsed:', monthParsed);
       
       // Calcular fecha de inicio y fin del mes actual
       const monthStartDate = new Date(currentYear, currentMonth - 1, 1);
