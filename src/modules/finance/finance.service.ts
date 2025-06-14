@@ -229,7 +229,7 @@ export class FinanceService {
       const currentYear = currentDate.getFullYear();
       
       // Obtener el nombre del mes formateado
-      const formattedMonth = format({ date: currentDate, format: 'MMMM' });
+      const formattedMonth = format({ date: currentDate, format: 'MMMM' , tz: 'America/Guayaquil' });
       const monthParsed = formattedMonth.charAt(0).toUpperCase() + formattedMonth.slice(1);
       
       // Calcular fecha de inicio y fin del mes actual
