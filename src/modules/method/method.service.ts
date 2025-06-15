@@ -23,9 +23,6 @@ export class MethodService {
             duration_type: true,
             method: true,
             amortizations: {
-              where: {
-                status: 'Pagado',
-              },
               select: {
                 quota: true,
                 number_months: true,
@@ -36,10 +33,14 @@ export class MethodService {
             },
           },
         });
+    
         // Procesar los datos para agregar la información adicional
         const processedDebts = debts.map((debt) => {
+          // Obtener todas las amortizaciones (pagadas y pendientes)
+          const allAmortizations = debt.amortizations;
+          
           // Calcular cuotas pagadas
-          const paidAmortizations = debt.amortizations.filter(
+          const paidAmortizations = allAmortizations.filter(
             (a) => a.status === 'Pagado',
           );
           const totalPaidAmount = paidAmortizations.reduce(
@@ -47,23 +48,51 @@ export class MethodService {
             0,
           );
           const paidInstallmentsCount = paidAmortizations.length;
-  
+    
           // Calcular cuotas pendientes
-          const remainingInstallments =
-            debt.duration_months - paidInstallmentsCount;
-  
-          // Calcular monto pendiente por pagar
-          const remainingAmount = Number(debt.amount) - totalPaidAmount;
-  
+          const remainingInstallments = debt.duration_months - paidInstallmentsCount;
+    
+          // CÁLCULO CORREGIDO: El monto total a pagar es la suma de TODAS las cuotas
+          const totalAmountToPay = allAmortizations.reduce(
+            (sum, a) => sum + Number(a.quota),
+            0,
+          );
+    
+          // Monto pendiente por pagar = Total a pagar - Total ya pagado
+          const remainingAmount = totalAmountToPay - totalPaidAmount;
+    
+          // Información adicional útil
+          const loanAmount = Number(debt.amount); // Monto original del préstamo
+          const totalInterest = totalAmountToPay - loanAmount; // Total de intereses
+          const paidInterest = paidAmortizations.reduce(
+            (sum, a) => sum + Number(a.interest || 0),
+            0,
+          );
+          const remainingInterest = totalInterest - paidInterest;
+    
           return {
             ...debt,
-            totalPaidAmount,
-            paidInstallmentsCount,
-            remainingInstallments,
-            remainingAmount,
+            // Montos básicos
+            loanAmount, // Monto original del préstamo
+            totalAmountToPay, // Monto total a pagar (préstamo + intereses)
+            totalPaidAmount, // Total ya pagado
+            remainingAmount, // Monto pendiente por pagar
+            
+            // Información de intereses
+            totalInterest, // Total de intereses del préstamo
+            paidInterest, // Intereses ya pagados
+            remainingInterest, // Intereses pendientes por pagar
+            
+            // Información de cuotas
+            paidInstallmentsCount, // Cuotas pagadas
+            remainingInstallments, // Cuotas pendientes
+            
+            // Porcentajes de progreso
+            paymentProgress: totalAmountToPay > 0 ? (totalPaidAmount / totalAmountToPay) * 100 : 0,
+            installmentProgress: debt.duration_months > 0 ? (paidInstallmentsCount / debt.duration_months) * 100 : 0,
           };
         });
-  
+    
         return {
           message: 'Deudas cargadas con éxito',
           data: processedDebts,
