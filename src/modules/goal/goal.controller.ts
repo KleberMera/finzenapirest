@@ -49,4 +49,9 @@ export class GoalController {
   async deleteGoalContribution(@Param('goalContributionId') goalContributionId: number) {
     return await this.goalService.deleteGoalContribution(Number(goalContributionId));
   }
+
+  @Delete(':goalId')
+  async deleteGoal(@Param('goalId') goalId: number) {
+    return await this.goalService.deleteGoalById(Number(goalId));
+  }
 }

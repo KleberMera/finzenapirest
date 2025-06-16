@@ -31,54 +31,89 @@ export class GoalService {
   }
 
   //Crear Seguimiento de meta por id de usuario y id de meta
-  async createGoalTracking(goalContribution: GoalContributionDTO, goalId: number, userId: number) {
-    try {
-       
-        const goalExists = await this.prismaService.goal.findUnique({
-            where: {
-                id: goalId,
-                user_id: userId,
-                
-                
-            },
-        });
-        if (!goalExists) {
-            throw new Error('Meta no encontrada');
-        }
-        const newGoalContribution = await this.prismaService.goalContribution.create({
-            data: {
-                ...goalContribution,
-                goal_id: goalId,
-               
-            },
-        });
-        return {
-            message: 'Aporte guardado exitosamente',
-            data: newGoalContribution,
-        };
-      
-    } catch (error) {
-      if (error instanceof Error) {
-        throw error;
-      }
-      throw new Error(
-        `Error al crear el aporte a meta: ${error.message}`,
-      );
-    }
-  }
+    async createGoalTracking(goalContribution: GoalContributionDTO, goalId: number, userId: number) {
+      try {
+          const goalExists = await this.prismaService.goal.findUnique({
+              where: {
+                  id: goalId,
+                  user_id: userId,  
+              },
+              include: {
+                  contributions: true,
+              },
+          });
+          
+          if (!goalExists) {
+              throw new Error('Meta no encontrada');
+          }
 
-  // Obtener todos los metas de un usuario
-  async getGoalByUserId(userId: number) {
-    const goals = await this.prismaService.goal.findMany({
-      where: {
-        user_id: Number(userId),
-      },
-    });
-    return {
-      message: 'Metas cargadas con éxito',
-      data: goals,
-    };
-  }
+          const newGoalContribution = await this.prismaService.goalContribution.create({
+              data: {
+                  ...goalContribution,
+                  goal_id: goalId,
+              },
+          });
+
+          // Calculate total contributions including the new one
+          const totalContributed = goalExists.contributions.reduce(
+              (sum, contribution) => sum + Number(contribution.amount),
+              0
+          ) + Number(goalContribution.amount);
+
+          // If target amount is reached, update goal status
+          if (totalContributed >= Number(goalExists.target_amount)) {
+              await this.prismaService.goal.update({
+                  where: { id: goalId },
+                  data: { status: 'Completed' }
+              });
+          }
+
+          return {
+              message: 'Aporte guardado exitosamente',
+              data: newGoalContribution,
+          };
+      } catch (error) {
+        if (error instanceof Error) {
+          throw error;
+        }
+        throw new Error(
+          `Error al crear el aporte a meta: ${error.message}`,
+        );
+      }
+    }
+    // Obtener todos los metas de un usuario
+    async getGoalByUserId(userId: number) {
+      const goals = await this.prismaService.goal.findMany({
+        where: {
+          user_id: Number(userId),
+        },
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          target_amount: true,
+          start_date: true,
+          deadline: true,
+          status: true,
+          user_id: true,
+          _count: {
+            select: {
+              contributions: true
+            }
+          }
+        }
+      });
+
+      const goalsWithContributionFlag = goals.map(goal => ({
+        ...goal,
+        hasContributions: goal._count.contributions > 0
+      }));
+
+      return {
+        message: 'Metas cargadas con éxito',
+        data: goalsWithContributionFlag,
+      };
+    }
 
   //Obetner seguimientos de meta por id de usuario y id de meta
   async getGoalTrackingByUserIdAndGoalId(userId: number, goalId: number) {
@@ -219,6 +254,28 @@ export class GoalService {
       }
       throw new Error(
         `Error al eliminar el aporte a meta: ${error.message}`,
+      );
+    }
+  }
+
+  //Borrar meta por id
+  async deleteGoalById(goalId: number) {
+    try {
+      const deletedGoal = await this.prismaService.goal.delete({
+        where: {
+          id: goalId,
+        },
+      });
+      return {
+        message: 'Meta eliminada con éxito',
+        data: deletedGoal,
+      };
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error(
+        `Error al eliminar la meta: ${error.message}`,
       );
     }
   }

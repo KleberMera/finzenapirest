@@ -117,11 +117,11 @@ export class GenerativeAiService {
   initializeConversationContext(userId: number): void {
     const systemPrompt = {
       role: 'model',
-     // parts: [{ text: 'Soy FinzenIA, tu asistente financiero personal. Puedo ayudarte a registrar transacciones, analizar tus gastos e ingresos, y responder preguntas sobre finanzas personales. ¿En qué puedo ayudarte hoy?' }]
       parts: [{ 
         text: `¡Hola! 👋 Soy FinzenIA, tu asistente financiero personal. 
         Por el momento puedo ayudarte a:\n\n• **Registrar transacciones** 
         a través de texto o con una imagen 📝📸\n• 
+        **Generar múltiples transacciones** a partir de una imagen o texto 📊\n•
         **Responder preguntas generales** sobre finanzas personales 
         💡\n\n¿En qué puedo ayudarte hoy?`}]
     };
