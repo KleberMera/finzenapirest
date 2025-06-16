@@ -162,7 +162,7 @@ export class DebtService {
     });
 
     return {
-      message: `Se actualizaron ${updateDto.ids.length} amortizaciones con éxito`,
+      message: `Se actualizaron ${updateDto.ids.length} pagos con éxito`,
       data: updatedDebt
     };
   }
@@ -896,7 +896,7 @@ export class DebtService {
       });
 
       return {
-        message: 'Deuda borrada con éxito',
+        message: 'Deuda eliminada con éxito',
         data: debt,
       };
     } catch (error) {
