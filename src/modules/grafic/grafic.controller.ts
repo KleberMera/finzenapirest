@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { GraficService } from './grafic.service';
 
 @Controller('grafic')
@@ -27,5 +27,14 @@ export class GraficController {
       endMonth ? Number(endMonth) : undefined,
       endYear ? Number(endYear) : undefined,
     );
+  }
+
+
+  @Post('monthly-summary/:userId')
+  async getMonthlySummary(@Param('userId') userId: string,
+   @Body('startMonth') startMonth: number,
+   @Body('startYear') startYear: number,
+) {
+    return this.graficService.getMonthlySummary(Number(userId), Number(startMonth), Number(startYear));
   }
 }

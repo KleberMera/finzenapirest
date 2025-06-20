@@ -1,4 +1,4 @@
-import { format } from '@formkit/tempo';
+import { format, monthEnd, monthStart } from '@formkit/tempo';
 import { BadRequestException, Injectable } from '@nestjs/common';
 
 
@@ -209,4 +209,55 @@ export class GraficService {
     };
   }
   
+
+
+
+async getMonthlySummary(userId: number, month: number, year: number) {
+  // Crear fechas del primer y último día del mes usando Tempo
+  const firstDay = monthStart(format(new Date(year, month - 1, 1), 'YYYY-MM-DD', 'es'));
+  const lastDay = monthEnd(format(firstDay, 'YYYY-MM-DD', 'es'));
+  
+
+  
+  console.log('Rango de fechas:', firstDay, 'hasta', lastDay);
+  
+  // Ejecutar query raw para PostgreSQL
+  const result = await this.prisma.$queryRaw`
+    SELECT
+      t.date::DATE as date,
+      SUM(CASE WHEN c.type = 'Gasto' THEN t.amount ELSE 0 END) as gasto,
+      SUM(CASE WHEN c.type = 'Ingreso' THEN t.amount ELSE 0 END) as ingreso
+    FROM "Transaction" t
+    INNER JOIN "Category" c ON t.category_id = c.id
+    WHERE c.user_id = ${userId}
+      AND t.date::DATE >= ${firstDay}::DATE
+      AND t.date::DATE <= ${lastDay}::DATE
+    GROUP BY t.date::DATE
+    ORDER BY t.date::DATE
+  `;
+
+  // Crear estructura base para todos los días del mes usando Tempo
+  const daysInMonth = lastDay.getDate(); // Más directo ya que tenemos lastDay
+  
+  const monthlySummary = Array.from({ length: daysInMonth }, (_, i) => ({
+    day: i + 1,
+    gasto: 0,
+    ingreso: 0,
+  }));
+  
+
+  // Llenar con datos de la consulta
+  (result as Array<{ date: string; gasto: string; ingreso: string }>).forEach((row) => {
+
+    const day = new Date(row.date).getDate();
+    monthlySummary[day - 1].gasto = Number(row.gasto) || 0;
+    monthlySummary[day - 1].ingreso = Number(row.ingreso) || 0;
+  });
+
+  return {
+    message: 'Datos Mensuales Obtenidos',
+    data: monthlySummary,
+    status: 200,
+  };
+}
 }

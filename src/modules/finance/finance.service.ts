@@ -354,7 +354,7 @@ export class FinanceService {
     });
     
     return {
-      message: 'Financial summary range generated successfully',
+      message: 'Rango de resumen financiero generado con éxito',
       data: monthlyResults
     };
   }
@@ -536,7 +536,7 @@ export class FinanceService {
   
     // 16. Respuesta final completa
     return {
-      'message': 'Financial summary generated successfully',
+      'message': 'Rango de resumen financiero generado con éxito',
       'data': {
         totalIncome: totalIncome.toFixed(2),
         salaryAmount: salaryAmount.toFixed(2),
