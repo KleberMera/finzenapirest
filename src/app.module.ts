@@ -28,6 +28,7 @@ import { MethodModule } from './modules/method/method.module';
 import { SendNotificationModule } from './modules/send-notification/send-notification.module';
 import { UserModule } from './modules/user/user.module';
 import { GraficAdminModule } from './modules/admin/grafic-admin/grafic-admin.module';
+import { LocalStorageModule } from './config/local-storage/local-storage.module';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { GraficAdminModule } from './modules/admin/grafic-admin/grafic-admin.mod
     FinanceModule,
     FcmNotificationModule,
     S3Module,
+    LocalStorageModule,
     MethodModule,
     RecurrentTransactionModule,
     SendNotificationModule,

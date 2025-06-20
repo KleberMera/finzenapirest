@@ -8,13 +8,14 @@ import { memoryStorage } from 'multer';
 import { S3Service } from 'src/config/s3/s3.service';
 import { ConfigModule } from '@nestjs/config';
 import { GenerativeAiService } from 'src/config/generative-ai/generative-ai.service';
+import { LocalStorageService } from 'src/config/local-storage/local-storage.service';
 
 
 
 @Module({
   
   controllers: [TicketsController],
-  providers: [TicketsService, GenerativeAiService, S3Service,],
+  providers: [TicketsService, GenerativeAiService, S3Service, LocalStorageService,],
   imports: [
     ConfigModule,
 

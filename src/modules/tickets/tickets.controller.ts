@@ -2,13 +2,15 @@ import { Body, Controller, HttpException, HttpStatus, Param, Post, UploadedFile,
 import { FileInterceptor } from '@nestjs/platform-express';
 import { TicketsService } from './tickets.service';
 import { S3Service } from 'src/config/s3/s3.service';
+import { LocalStorageService } from 'src/config/local-storage/local-storage.service';
 
 
 @Controller('tickets')
 export class TicketsController {
   constructor(
     private readonly ticketsService: TicketsService,
-    private readonly s3Service: S3Service
+    private readonly s3Service: S3Service,
+    private readonly localStorageService: LocalStorageService
   ) {}
 
   @Post('process-text/:userId')
@@ -149,21 +151,35 @@ export class TicketsController {
       // Caso de una sola transacción
       const transaction = result.transaction;
 
-      // Intentar subir la imagen a S3
-      try {
-        const s3Key = `receipts/${userIdNumber}/${transaction.id}_${Date.now()}.jpg`;
-        await this.s3Service.uploadFile(file.buffer, s3Key, file.mimetype);
+      // CONFIGURACIÓN DE ALMACENAMIENTO: Comenta/descomenta la sección que desees usar
+      
+      // OPCIÓN 1: Almacenamiento en S3
+      // try {
+      //   const s3Key = `receipts/${userIdNumber}/${transaction.id}_${Date.now()}.jpg`;
+      //   await this.s3Service.uploadFile(file.buffer, s3Key, file.mimetype);
         
-        // Actualizar la transacción con la clave de S3
-
-        //const s3Key = await this.s3Service.uploadFile(userIdNumber, file);
-        // Actualizar la transacción con la clave S3
-        await this.ticketsService.updateTransactionWithS3Key(transaction.id, s3Key);
-        transaction.receiptImageS3Key = s3Key;
-      } catch (s3Error) {
-        console.error('Error al subir la imagen a S3:', s3Error);
-        // Continuamos con la transacción aunque la subida a S3 haya fallado
+      //   // Actualizar la transacción con la clave de S3
+      //   await this.ticketsService.updateTransactionWithS3Key(transaction.id, s3Key);
+      //   transaction.receiptImageS3Key = s3Key;
+      // } catch (s3Error) {
+      //   console.error('Error al subir la imagen a S3:', s3Error);
+      //   // Continuamos con la transacción aunque la subida a S3 haya fallado
+      // }
+      
+      // OPCIÓN 2: Almacenamiento local (comenta la sección anterior y descomenta esta para usar almacenamiento local)
+  
+      try {
+        // Subir archivo al almacenamiento local
+        const localPath = await this.localStorageService.uploadFile(file, userIdNumber, file.mimetype);
+        
+        // Actualizar la transacción con la clave local
+        await this.ticketsService.updateTransactionWithS3Key(transaction.id, localPath);
+        transaction.receiptImageS3Key = localPath;
+      } catch (localError) {
+        console.error('Error al guardar la imagen localmente:', localError);
+        // Continuamos con la transacción aunque el guardado local haya fallado
       }
+      
 
       return {
         message: 'Recibo procesado exitosamente',
