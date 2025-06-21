@@ -47,7 +47,7 @@ export class RecurrentTransactionService {
           nextExecutionDate: format(new Date(recurrenceData.nextExecutionDate), 'YYYY-MM-DD', 'es'),
           endDate: recurrenceData.endDate ? format(new Date(recurrenceData.endDate), 'YYYY-MM-DD', 'es') : null,
           dayOfMonth: recurrenceData.dayOfMonth,
-          dayOfWeek: recurrenceData.dayOfWeek
+
         }
       });
 
@@ -110,7 +110,7 @@ export class RecurrentTransactionService {
           nextExecutionDate: recurrenceConfig.nextExecutionDate,
           endDate: recurrenceConfig.endDate,
           dayOfMonth: recurrenceConfig.dayOfMonth,
-          dayOfWeek: recurrenceConfig.dayOfWeek
+
         }
       });
   
@@ -253,10 +253,10 @@ export class RecurrentTransactionService {
         },
         data: {
           frequency: updateRecurrentTransactionDto.frequency,
-          nextExecutionDate: format(new Date(updateRecurrentTransactionDto.nextExecutionDate), 'YYYY-MM-DD', 'es'),
+          nextExecutionDate: updateRecurrentTransactionDto.nextExecutionDate,
           endDate: updateRecurrentTransactionDto.endDate ? format(new Date(updateRecurrentTransactionDto.endDate), 'YYYY-MM-DD', 'es') : null,
           dayOfMonth: updateRecurrentTransactionDto.dayOfMonth,
-          dayOfWeek: updateRecurrentTransactionDto.dayOfWeek,
+
           isActive: updateRecurrentTransactionDto.isActive
         }
       });

@@ -39,16 +39,16 @@ export class RecurrentTransactionController {
     return this.recurrentTransactionService.getGeneratedTransactions(parseInt(id), req.user.id);
   }
 
-  @Patch(':id')
+  @Patch(':id/:userId')
   update(
     @Param('id') id: string, 
     @Body() updateRecurrentTransactionDto: UpdateRecurrentTransactionDto,
-    @Request() req
+    @Param('userId') userId: number,
   ) {
     return this.recurrentTransactionService.update(
       parseInt(id),
       updateRecurrentTransactionDto,
-      req.user.id
+      Number(userId)
     );
   }
 

@@ -86,6 +86,10 @@ model Notification {
   isRead    Boolean  @default(false)
   debt_id   Int?
   debt      Debt?    @relation(fields: [debt_id], references: [id])
+  recurringTransactionId Int? // Relación opcional con transacciones recurrentes
+  recurringTransaction RecurringTransaction? @relation(fields: [recurringTransactionId], references: [id])
+  date      String? // Fecha de la notificación
+  time      String? // Hora de la notificación
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -172,12 +176,12 @@ model RecurringTransaction {
   nextExecutionDate     String
   endDate               String?
   dayOfMonth            Int? // Para transacciones mensuales (día del mes)
-  dayOfWeek             Int? // Para transacciones semanales (día de la semana)
   lastExecuted          String? // Última vez que se generó una transacción
   generatedTransactions Int         @default(0) // Contador de transacciones generadas
   isActive              Boolean     @default(true) // Estado de activación
   createdAt             DateTime    @default(now())
   updatedAt             DateTime    @updatedAt
+  notifications         Notification[] // Relación con notificaciones
 }
 
 model Goal {

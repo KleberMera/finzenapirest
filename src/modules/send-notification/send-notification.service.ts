@@ -19,7 +19,7 @@ export class SendNotificationService {
   /**
    * Cron job que se ejecuta cada 2 minutos para verificar notificaciones pendientes
    */
-  @Cron('*/2 * * * *')
+  //@Cron('*/2 * * * *')
   async checkPendingNotifications() {
     this.logger.log('Verificando notificaciones pendientes de amortizaciones de deudas...');
     
@@ -128,7 +128,7 @@ export class SendNotificationService {
   }
 
  
-  @Cron('*/6 * * * *')
+  @Cron('*/1 * * * *')
   async checkPendingRecurringTransactions() {
     this.logger.log('=== INICIANDO VERIFICACIÓN DE TRANSACCIONES RECURRENTES ===');
     this.logger.log('Verificando notificaciones pendientes de transacciones recurrentes...');
@@ -236,6 +236,7 @@ export class SendNotificationService {
                 user_id: user.id,
                 title: `Próxima transacción recurrente: ${transaction.name}`,
                 message: `Tu transacción por $${transaction.amount.toNumber().toFixed(2)} está programada para el ${nextExecutionDate}`,
+                recurringTransactionId: recurringTx.id,
                 createdAt: {
                   gte: new Date(formattedToday + 'T00:00:00.000Z'),
                   lte: new Date(formattedToday + 'T23:59:59.999Z'),
@@ -248,7 +249,7 @@ export class SendNotificationService {
               await this.webPushService.saveNotificationToDatabase(user.id, {
                 title: `Próxima transacción recurrente: ${transaction.name}`,
                 body: `Tu transacción por $${transaction.amount.toNumber().toFixed(2)} está programada para el ${nextExecutionDate}`,
-              });
+              }, undefined, recurringTx.id);
               for (const preference of userPreferences) {
                 try {
                   const subscription = JSON.parse(preference.subscription);
@@ -319,11 +320,12 @@ export class SendNotificationService {
                 await this.webPushService.saveNotificationToDatabase(user.id, {
                   title: `Transacción recurrente generada: ${transaction.name}`,
                   body: `Se ha generado automáticamente una transacción por $${transaction.amount.toNumber().toFixed(2)}. La próxima ejecución será el ${format(nextDate, 'yyyy-MM-dd')}.`,
-                });
+                }, undefined, recurringTx.id);
                 for (const preference of userPreferences) {
                   try {
                     const subscription = JSON.parse(preference.subscription);
                     await this.webPushService.sendNotification(subscription, {
+          
                       title: `Transacción recurrente generada: ${transaction.name}`,
                       body: `Se ha generado automáticamente una transacción por $${transaction.amount.toNumber().toFixed(2)}. La próxima ejecución será el ${format(nextDate, 'yyyy-MM-dd')}.`,
                     });
