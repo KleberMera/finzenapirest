@@ -1,3 +1,4 @@
+/* eslint-disable prefer-const */
 import { Injectable, Logger } from '@nestjs/common';
 
 import { PrismaService } from 'src/config/prisma/prisma.service';
@@ -18,7 +19,7 @@ export class SendNotificationService {
   /**
    * Cron job que se ejecuta cada 2 minutos para verificar notificaciones pendientes
    */
-  //@Cron('*/2 * * * *')
+ // @Cron('*/2 * * * *')
   async checkPendingNotifications() {
     this.logger.log('Verificando notificaciones pendientes de amortizaciones de deudas...');
     
@@ -123,9 +124,11 @@ export class SendNotificationService {
   }
 
  
-  //@Cron('*/1 * * * *')
+  @Cron('*/2 * * * *')
   async checkPendingRecurringTransactions() {
+    this.logger.log('=== INICIANDO VERIFICACIÓN DE TRANSACCIONES RECURRENTES ===');
     this.logger.log('Verificando notificaciones pendientes de transacciones recurrentes...');
+    this.logger.log('Buscando transacciones recurrentes para generar y notificar...');
     
     const today = new Date();
     const formattedToday = format(today, 'yyyy-MM-dd');
@@ -204,36 +207,30 @@ export class SendNotificationService {
         for (const recurringTx of recurringTransactions) {
           this.logger.log(`Procesando transacción recurrente ID: ${recurringTx.id}, Nombre: ${recurringTx.transaction.name}, Fecha: ${recurringTx.nextExecutionDate}`);
           if (!recurringTx.nextExecutionDate) continue;
+          // Verificar si la transacción recurrente ha alcanzado su fecha de finalización
+          if (recurringTx.endDate) {
+            const endDate = parseISO(recurringTx.endDate);
+            const today = parseISO(formattedToday);
+            
+            // Si la fecha actual es posterior a la fecha de finalización, omitir esta transacción
+            if (today > endDate) {
+              this.logger.log(`Transacción recurrente ID: ${recurringTx.id} ha alcanzado su fecha de finalización (${recurringTx.endDate}). Omitiendo.`);
+              continue;
+            }
+          }
           
           const nextExecutionDate = recurringTx.nextExecutionDate;
           const notifyDate = format(addDays(parseISO(nextExecutionDate), -daysBeforeNotify), 'yyyy-MM-dd');
           log('notifyDate', notifyDate);
           log('formattedToday', formattedToday);
-          
+          const transaction = recurringTx.transaction;
+          // 1. Notificación de recordatorio (días de anticipación)
           if (notifyDate === formattedToday) {
-            log('Notificación de transacción recurrente');
-            const transaction = recurringTx.transaction;
-            log('transaction', transaction);
-            // 6. Guardar notificación en la base de datos (solo una vez por usuario)
             await this.webPushService.saveNotificationToDatabase(user.id, {
               title: `Próxima transacción recurrente: ${transaction.name}`,
               body: `Tu transacción por $${transaction.amount.toNumber().toFixed(2)} está programada para el ${nextExecutionDate}`,
             });
-            
-            // 7. Enviar notificación a todos los dispositivos del usuario
             for (const preference of userPreferences) {
-              this.logger.log(`
-                ¡NOTIFICACIÓN DE TRANSACCIÓN RECURRENTE!
-                Usuario: ${user.name || user.username || user.email} (ID: ${user.id})
-                Dispositivo: ${preference.device.brand || ''} ${preference.device.model || ''} (ID: ${preference.device.id})
-                Transacción: ${transaction.name || 'Sin nombre'} (ID: ${transaction.id})
-                Categoría: ${transaction.category.name || 'Sin categoría'}
-                Monto: ${transaction.amount.toNumber() || 'N/A'}
-                Fecha programada: ${nextExecutionDate}
-                Días de anticipación configurados: ${daysBeforeNotify}
-                Fecha de notificación (hoy): ${formattedToday}
-              `);
-
               try {
                 const subscription = JSON.parse(preference.subscription);
                 await this.webPushService.sendNotification(subscription, {
@@ -244,13 +241,22 @@ export class SendNotificationService {
                 this.logger.error(`Error enviando notificación al dispositivo ${preference.device.id}:`, error);
               }
             }
-            
-            // 8. Si la fecha de ejecución es hoy, crear la nueva transacción y actualizar la recurrencia
-            log('nextExecutionDate', nextExecutionDate);
-            log('formattedToday', formattedToday);
-            if (nextExecutionDate === formattedToday) {
+          }
+          // 2. Generación y notificación SOLO si es el día exacto
+          if (nextExecutionDate === formattedToday) {
+            // Verificar si ya existe una transacción generada con los mismos datos y fecha
+            const existingTransaction = await this.prisma.transaction.findFirst({
+              where: {
+                category_id: transaction.category_id,
+                name: transaction.name,
+                amount: transaction.amount,
+                date: nextExecutionDate,
+                isRecurring: false,
+              }
+            });
+            const wasAlreadyGenerated = recurringTx.lastExecuted === formattedToday;
+            if (!wasAlreadyGenerated && !existingTransaction) {
               try {
-                // Crear una nueva transacción basada en la original
                 const newTransaction = await this.prisma.transaction.create({
                   data: {
                     category_id: transaction.category_id,
@@ -262,35 +268,25 @@ export class SendNotificationService {
                     isRecurring: false,
                   }
                 });
-                
-                // Calcular la próxima fecha de ejecución según la frecuencia
-                // eslint-disable-next-line prefer-const
+                // Calcular la próxima fecha de ejecución basada en la fecha actual
                 let nextDate = new Date(nextExecutionDate);
-                
-                switch (recurringTx.frequency) {
-                  case 'Diario':
-                    nextDate.setDate(nextDate.getDate() + 1);
-                    break;
-                  case 'Semanal':
-                    nextDate.setDate(nextDate.getDate() + 7);
-                    break;
-                  case 'Quincenal':
-                    nextDate.setDate(nextDate.getDate() + 15);
-                    break;
-                  case 'Mensual':
-                    // Mantener el mismo día del mes
-                    // eslint-disable-next-line no-case-declarations
-                    const dayOfMonth = recurringTx.dayOfMonth || nextDate.getDate();
-                    nextDate.setMonth(nextDate.getMonth() + 1);
-                    
-                    // Ajustar al día del mes correcto
-                    // eslint-disable-next-line no-case-declarations
+                let interval = 1;
+                if (recurringTx.frequency === 'Semanal') {
+                  interval = 7;
+                } else if (recurringTx.frequency === 'Quincenal') {
+                  interval = 15;
+                } else if (recurringTx.frequency === 'Mensual') {
+                  nextDate.setMonth(nextDate.getMonth() + 1);
+                  if (recurringTx.dayOfMonth) {
                     const lastDayOfMonth = new Date(nextDate.getFullYear(), nextDate.getMonth() + 1, 0).getDate();
-                    nextDate.setDate(Math.min(dayOfMonth, lastDayOfMonth));
-                    break;
+                    nextDate.setDate(Math.min(recurringTx.dayOfMonth, lastDayOfMonth));
+                    this.logger.log(`Usando día específico del mes: ${recurringTx.dayOfMonth} (ajustado a: ${nextDate.getDate()})`);
+                  }
+                  interval = 0;
                 }
-                
-                // Actualizar la transacción recurrente
+                if (interval > 0) {
+                  nextDate.setDate(nextDate.getDate() + interval);
+                }
                 await this.prisma.recurringTransaction.update({
                   where: { id: recurringTx.id },
                   data: {
@@ -299,23 +295,39 @@ export class SendNotificationService {
                     generatedTransactions: { increment: 1 }
                   }
                 });
-                
-                this.logger.log(`
-                  ¡TRANSACCIÓN RECURRENTE GENERADA!
-                  ID Original: ${transaction.id}
-                  ID Nueva: ${newTransaction.id}
-                  Próxima ejecución: ${format(nextDate, 'yyyy-MM-dd')}
-                `);
+                this.logger.log(`\n¡TRANSACCIÓN RECURRENTE GENERADA!\nID Original: ${transaction.id}\nID Nueva: ${newTransaction.id}\nPróxima ejecución: ${format(nextDate, 'yyyy-MM-dd')}`);
+                await this.webPushService.saveNotificationToDatabase(user.id, {
+                  title: `Transacción recurrente generada: ${transaction.name}`,
+                  body: `Se ha generado automáticamente una transacción por $${transaction.amount.toNumber().toFixed(2)}. La próxima ejecución será el ${format(nextDate, 'yyyy-MM-dd')}.`,
+                });
+                for (const preference of userPreferences) {
+                  try {
+                    const subscription = JSON.parse(preference.subscription);
+                    await this.webPushService.sendNotification(subscription, {
+                      title: `Transacción recurrente generada: ${transaction.name}`,
+                      body: `Se ha generado automáticamente una transacción por $${transaction.amount.toNumber().toFixed(2)}. La próxima ejecución será el ${format(nextDate, 'yyyy-MM-dd')}.`,
+                    });
+                  } catch (notificationError) {
+                    this.logger.error(`Error enviando notificación de transacción generada al dispositivo ${preference.device.id}:`, notificationError);
+                  }
+                }
               } catch (error) {
                 this.logger.error(`Error al generar la transacción recurrente:`, error);
               }
+            } else if (existingTransaction) {
+              this.logger.log(`Ya existe una transacción generada para la fecha ${nextExecutionDate} con los mismos datos. No se genera duplicado.`);
             }
           }
         }
       }
     } catch (error) {
       this.logger.error('Error al verificar transacciones recurrentes pendientes:', error);
+    } finally {
+      this.logger.log('=== FINALIZADA VERIFICACIÓN DE TRANSACCIONES RECURRENTES ===');
     }
   }
-  
+
+
 }
+
+
