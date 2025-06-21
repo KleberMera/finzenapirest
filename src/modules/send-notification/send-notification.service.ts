@@ -19,7 +19,7 @@ export class SendNotificationService {
   /**
    * Cron job que se ejecuta cada 2 minutos para verificar notificaciones pendientes
    */
- // @Cron('*/2 * * * *')
+  @Cron('*/2 * * * *')
   async checkPendingNotifications() {
     this.logger.log('Verificando notificaciones pendientes de amortizaciones de deudas...');
     
@@ -77,33 +77,37 @@ export class SendNotificationService {
         for (const debt of userDebts) {
           for (const amortization of debt.amortizations) {
             if (!amortization.date) continue;
-            
             const dueDate = amortization.date;
             log('dueDate', dueDate);
             const notifyDate = format(addDays(parseISO(dueDate), -daysBeforeNotify), 'yyyy-MM-dd');
             log('notifyDate', notifyDate);
             log('formattedToday', formattedToday);
             if (notifyDate === formattedToday) {
+              // Verificar si ya existe una notificación enviada para este usuario, deuda y fecha
+              const existingNotification = await this.prisma.notification.findFirst({
+                where: {
+                  user_id: user.id,
+                  debt_id: debt.id,
+                  title: `Próximo pago: ${debt.name}`,
+                  message: `Tu cuota #${amortization.number_months} por $${amortization.quota.toNumber().toFixed(2)} vence el ${amortization.date}`,
+                  createdAt: {
+                    gte: new Date(formattedToday + 'T00:00:00.000Z'),
+                    lte: new Date(formattedToday + 'T23:59:59.999Z'),
+                  },
+                }
+              });
+              if (existingNotification) {
+                this.logger.log(`Ya existe una notificación enviada para la deuda ${debt.name} y cuota #${amortization.number_months} hoy. No se envía duplicado.`);
+                continue;
+              }
               // 6. Guardar notificación en la base de datos (solo una vez por usuario)
               await this.webPushService.saveNotificationToDatabase(user.id, {
                 title: `Próximo pago: ${debt.name}`,
                 body: `Tu cuota #${amortization.number_months} por $${amortization.quota.toNumber().toFixed(2)} vence el ${amortization.date}`,
               }, debt.id);
-              
               // 7. Enviar notificación a todos los dispositivos del usuario
               for (const preference of userPreferences) {
-                this.logger.log(`
-                  ¡NOTIFICACIÓN PENDIENTE!
-                  Usuario: ${user.name || user.username || user.email} (ID: ${user.id})
-                  Dispositivo: ${preference.device.brand || ''} ${preference.device.model || ''} (ID: ${preference.device.id})
-                  Deuda: ${debt.name || 'Sin nombre'} (ID: ${debt.id})
-                  Amortización #${amortization.number_months || 'N/A'} (ID: ${amortization.id})
-                  Monto cuota: ${amortization.quota.toNumber() || 'N/A'}
-                  Fecha vencimiento: ${dueDate}
-                  Días de anticipación configurados: ${daysBeforeNotify}
-                  Fecha de notificación (hoy): ${formattedToday}
-                `);
-
+                this.logger.log(`\n                  ¡NOTIFICACIÓN PENDIENTE!\n                  Usuario: ${user.name || user.username || user.email} (ID: ${user.id})\n                  Dispositivo: ${preference.device.brand || ''} ${preference.device.model || ''} (ID: ${preference.device.id})\n                  Deuda: ${debt.name || 'Sin nombre'} (ID: ${debt.id})\n                  Amortización #${amortization.number_months || 'N/A'} (ID: ${amortization.id})\n                  Monto cuota: ${amortization.quota.toNumber() || 'N/A'}\n                  Fecha vencimiento: ${dueDate}\n                  Días de anticipación configurados: ${daysBeforeNotify}\n                  Fecha de notificación (hoy): ${formattedToday}\n                `);
                 try {
                   const subscription = JSON.parse(preference.subscription);
                   await this.webPushService.sendNotification(subscription, {
@@ -124,7 +128,7 @@ export class SendNotificationService {
   }
 
  
-  @Cron('*/2 * * * *')
+  @Cron('*/6 * * * *')
   async checkPendingRecurringTransactions() {
     this.logger.log('=== INICIANDO VERIFICACIÓN DE TRANSACCIONES RECURRENTES ===');
     this.logger.log('Verificando notificaciones pendientes de transacciones recurrentes...');
@@ -226,19 +230,35 @@ export class SendNotificationService {
           const transaction = recurringTx.transaction;
           // 1. Notificación de recordatorio (días de anticipación)
           if (notifyDate === formattedToday) {
-            await this.webPushService.saveNotificationToDatabase(user.id, {
-              title: `Próxima transacción recurrente: ${transaction.name}`,
-              body: `Tu transacción por $${transaction.amount.toNumber().toFixed(2)} está programada para el ${nextExecutionDate}`,
+            // Verificar si ya existe una notificación enviada para este usuario, transacción y fecha
+            const existingNotification = await this.prisma.notification.findFirst({
+              where: {
+                user_id: user.id,
+                title: `Próxima transacción recurrente: ${transaction.name}`,
+                message: `Tu transacción por $${transaction.amount.toNumber().toFixed(2)} está programada para el ${nextExecutionDate}`,
+                createdAt: {
+                  gte: new Date(formattedToday + 'T00:00:00.000Z'),
+                  lte: new Date(formattedToday + 'T23:59:59.999Z'),
+                },
+              }
             });
-            for (const preference of userPreferences) {
-              try {
-                const subscription = JSON.parse(preference.subscription);
-                await this.webPushService.sendNotification(subscription, {
-                  title: `Próxima transacción recurrente: ${transaction.name}`,
-                  body: `Tu transacción por $${transaction.amount.toNumber().toFixed(2)} está programada para el ${nextExecutionDate}`,
-                });
-              } catch (error) {
-                this.logger.error(`Error enviando notificación al dispositivo ${preference.device.id}:`, error);
+            if (existingNotification) {
+              this.logger.log(`Ya existe una notificación de recordatorio enviada para la transacción ${transaction.name} hoy. No se envía duplicado.`);
+            } else {
+              await this.webPushService.saveNotificationToDatabase(user.id, {
+                title: `Próxima transacción recurrente: ${transaction.name}`,
+                body: `Tu transacción por $${transaction.amount.toNumber().toFixed(2)} está programada para el ${nextExecutionDate}`,
+              });
+              for (const preference of userPreferences) {
+                try {
+                  const subscription = JSON.parse(preference.subscription);
+                  await this.webPushService.sendNotification(subscription, {
+                    title: `Próxima transacción recurrente: ${transaction.name}`,
+                    body: `Tu transacción por $${transaction.amount.toNumber().toFixed(2)} está programada para el ${nextExecutionDate}`,
+                  });
+                } catch (error) {
+                  this.logger.error(`Error enviando notificación al dispositivo ${preference.device.id}:`, error);
+                }
               }
             }
           }
