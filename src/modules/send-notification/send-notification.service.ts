@@ -19,7 +19,7 @@ export class SendNotificationService {
   /**
    * Cron job que se ejecuta cada 2 minutos para verificar notificaciones pendientes
    */
-  //@Cron('*/2 * * * *')
+  @Cron('0 8 * * *')
   async checkPendingNotifications() {
     this.logger.log('Verificando notificaciones pendientes de amortizaciones de deudas...');
     
@@ -128,7 +128,7 @@ export class SendNotificationService {
   }
 
  
-  @Cron('*/1 * * * *')
+  @Cron('10 8 * * *')
   async checkPendingRecurringTransactions() {
     this.logger.log('=== INICIANDO VERIFICACIÓN DE TRANSACCIONES RECURRENTES ===');
     this.logger.log('Verificando notificaciones pendientes de transacciones recurrentes...');
