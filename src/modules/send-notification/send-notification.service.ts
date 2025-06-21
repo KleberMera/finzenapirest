@@ -128,6 +128,7 @@ export class SendNotificationService {
   }
 
  
+  //Todos los días a las 8:10 am
   @Cron('10 8 * * *')
   async checkPendingRecurringTransactions() {
     this.logger.log('=== INICIANDO VERIFICACIÓN DE TRANSACCIONES RECURRENTES ===');
