@@ -17,7 +17,8 @@ export class SendNotificationService {
   ) {}
 
   /**
-   * Cron job que se ejecuta cada 2 minutos para verificar notificaciones pendientes
+   * Cron job que se ejecuta todos los días a las 8:00 am
+   * para verificar las notificaciones pendientes de amortizaciones de deudas.
    */
   @Cron('0 8 * * *')
   async checkPendingNotifications() {
