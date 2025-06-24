@@ -1,7 +1,8 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
 import { PrismaService } from 'src/config/prisma/prisma.service';
 import { Public } from 'src/guards/token.guard';
+import { FilterNotificationsDto } from 'src/models/filer-notitifation.dto';
 
 
 @Public()
@@ -45,24 +46,11 @@ export class NotificationsController {
     return this.notificationsService.getNotificationsByUserId(Number(userId));
   }
 
-  @Get('filter/:userId')
-  async filterNotifications(
-    @Param() { userId }: { userId: number },
-    @Query('debtId') debtId?: string,
-    @Query('isRead') isRead?: string,
-    @Query('includeAllDebts') includeAllDebts?: string
-  ) {
-    // Convert query parameters to appropriate types
-    const options = {
-      debtId: debtId ? Number(debtId) : undefined,
-      isRead: isRead ? isRead === 'true' : undefined,
-      includeAllDebts: includeAllDebts ? includeAllDebts === 'true' : false
-    };
-
-    return this.notificationsService.filterNotifications(
-      Number(userId),
-      options
-    );
+  @Post('filter') // Cambiado a POST para usar body
+  async getFilteredNotifications(@Body() filterDto: FilterNotificationsDto) {
+    const { userId, readStatus, type } = filterDto;
+  
+    return this.notificationsService.getNotificationsFiltered(userId, readStatus, type);
   }
 
   
@@ -103,3 +91,4 @@ export class NotificationsController {
     );
   }
 }
+   

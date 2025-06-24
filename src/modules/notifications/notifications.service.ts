@@ -1,4 +1,6 @@
 import { Injectable } from '@nestjs/common';
+import { log } from 'console';
+import { Prisma } from 'generated/prisma';
 import { PrismaService } from 'src/config/prisma/prisma.service';
 import { WebPushService } from 'src/providers/web-push/web-push.service';
 
@@ -156,40 +158,56 @@ async countSubscriptions(userId: number) {
     };
   }
 
-  async filterNotifications(userId: number, options?: { debtId?: number; isRead?: boolean; includeAllDebts?: boolean }) {
-    const where: any = { user_id: userId };
+async getNotificationsFiltered(
+    userId: number,
+    readStatus?: 'all' | 'read' | 'unread',
+    type?: 'all' | 'debt' | 'transaction',
+  ) {
+    const where: Prisma.NotificationWhereInput = {
+      user_id: userId,
+    };
 
-    // Si no se incluyen todas las deudas y se proporciona un debtId, filtrar por debtId
-    if (!options?.includeAllDebts && options?.debtId) {
-      where.debt_id = options.debtId;
+    if (readStatus === 'read') {
+      where.isRead = true;
+    } else if (readStatus === 'unread') {
+      where.isRead = false;
     }
-    // Si se piden todas las deudas, no aplicar filtro por debt_id
-    else if (options?.includeAllDebts) {
+
+    if (type === 'debt') {
       where.debt_id = { not: null };
+    } else if (type === 'transaction') {
+      where.recurringTransactionId = { not: null };
     }
 
-    // Aplicar filtro por estado de lectura si se proporciona
-    if (options?.isRead !== undefined) {
-      where.isRead = options.isRead;
-    }
+    log('where', where);
 
-    const notifications = await this.prisma.notification.findMany({
+    return this.prisma.notification.findMany({
       where,
-      orderBy: { createdAt: 'desc' },
+      orderBy: {
+        createdAt: 'desc',
+      },
       include: {
         debt: {
           select: {
             id: true,
-            name: true
-          }
-        }
-      }
+            name: true,
+          },
+        },
+        recurringTransaction: {
+          select: {
+            id: true,
+            transaction: {
+              select: {
+                id: true,
+                name: true,
+                description: true,
+              },
+            }
+            
+          },
+        },
+      },
     });
-
-    return {
-      message: 'Notificaciones filtradas',
-      data: notifications
-    };
   }
 
   async markAsRead(notificationId: number, userId: number) {
