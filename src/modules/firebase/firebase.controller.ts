@@ -24,6 +24,11 @@ export class FirebaseController {
     return this.firebaseService.signUpWithGoogle(idToken);
   }
 
+  @Post('google/signin-or-signup')
+  async signInOrSignUpWithGoogle(@Body('idToken') idToken: string) {
+    return this.firebaseService.signInOrSignUpWithGoogle(idToken);
+  }
+
   @Post('verify-email')
   async requestPasswordReset(@Body('email') email: string) {
     return this.firebaseService.requestPasswordReset(email);

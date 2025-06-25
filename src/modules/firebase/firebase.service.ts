@@ -332,5 +332,95 @@ async loginWithGoogle(idToken: string) {
     }
   }
 
+  /**
+   * Inicia sesión o registra un usuario con Google en una sola función.
+   * Si el usuario existe, inicia sesión; si no, lo registra y luego inicia sesión.
+   */
+  async signInOrSignUpWithGoogle(idToken: string) {
+    try {
+      const decodedToken = await firebaseAdmin.auth().verifyIdToken(idToken) as FirebaseDecodedToken;
+
+      // Buscar usuario por UID de Firebase o por email
+      let user = await this.prismaService.user.findFirst({
+        where: {
+          OR: [
+            { firebaseUid: decodedToken.uid },
+            { email: decodedToken.email }
+          ]
+        },
+      });
+
+      // Si no existe el usuario, lo registra
+      if (!user) {
+        // Calcular nombre base de usuario
+        const baseUsername = decodedToken.name
+          ? decodedToken.name.trim().toLowerCase().replace(/\s+/g, '.')
+          : decodedToken.email.split('@')[0];
+
+        // Asegurar unicidad del username
+        let username = baseUsername;
+        let collision = true;
+        while (collision) {
+          const userWithSameUsername = await this.prismaService.user.findUnique({
+            where: { username },
+          });
+          if (userWithSameUsername) {
+            username = `${baseUsername}.${this.nanoid()}`;
+          } else {
+            collision = false;
+          }
+        }
+
+        // Separar nombre y apellido (si hay)
+        const fullName = decodedToken.name || '';
+        const [firstName, ...rest] = fullName.trim().split(/\s+/);
+        const lastName = rest.length > 0 ? rest.join(' ') : null;
+
+        // Crear el usuario en la base de datos
+        user = await this.prismaService.user.create({
+          data: {
+            email: decodedToken.email,
+            username,
+            name: firstName || null,
+            last_name: lastName,
+            firebaseUid: decodedToken.uid,
+            avatar: decodedToken.picture || null,
+            rol_id: 2, // Rol por defecto
+            status: true,
+          },
+        });
+      } else {
+        // Si el usuario existe pero no tiene firebaseUid, lo actualizamos
+        if (user.email === decodedToken.email && !user.firebaseUid) {
+          await this.prismaService.user.update({
+            where: { id: user.id },
+            data: { firebaseUid: decodedToken.uid }
+          });
+        }
+        // Validar que el status del usuario esté en true
+        if (!user.status) {
+          throw new BadRequestException('Usuario inactivo o suspendido');
+        }
+      }
+
+      // Quitar campos sensibles y generar JWT
+      const { password, createdAt, updatedAt, ...userWithoutPassword } = user;
+      const payload = { user: userWithoutPassword, createdAt, updatedAt };
+      const access_token = await this.jwtService.signAsync(payload);
+
+      return {
+        message: 'Usuario autenticado con éxito',
+        data: userWithoutPassword,
+        access_token,
+      };
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      console.error('Error en signInOrSignUpWithGoogle:', error);
+      throw new UnauthorizedException('Error al autenticar o registrar con Google');
+    }
+  }
+
   
 }

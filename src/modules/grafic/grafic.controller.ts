@@ -10,7 +10,18 @@ export class GraficController {
     return this.graficService.getWeeklySummary(Number(userId));
   }
 
-
+   @Post('monthly-summary/:userId')
+  async getMonthlySummary(
+    @Param('userId') userId: string,
+    @Body('startMonth') startMonth: number,
+    @Body('startYear') startYear: number,
+  ) {
+    return this.graficService.getMonthlySummary(
+      Number(userId),
+      Number(startMonth),
+      Number(startYear),
+    );
+  }
 
   @Get('range/data/:userId')
   async getTransactionData(
@@ -29,12 +40,5 @@ export class GraficController {
     );
   }
 
-
-  @Post('monthly-summary/:userId')
-  async getMonthlySummary(@Param('userId') userId: string,
-   @Body('startMonth') startMonth: number,
-   @Body('startYear') startYear: number,
-) {
-    return this.graficService.getMonthlySummary(Number(userId), Number(startMonth), Number(startYear));
-  }
+ 
 }
